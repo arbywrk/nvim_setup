@@ -158,6 +158,50 @@ return {
 								vim.lsp.buf.format({ async = false })
 							end,
 						})
+
+						vim.api.nvim_create_autocmd("FileType", {
+							pattern = { "c", "cpp", "h", "hpp" },
+							callback = function()
+								local function find_clang_format(start_path)
+									local dir = vim.fn.fnamemodify(start_path, ":p:h")
+									while dir and dir ~= "/" do
+										local cf = dir .. "/.clang-format"
+										local cf_alt = dir .. "/_clang-format"
+										if vim.fn.filereadable(cf) == 1 then
+											return cf
+										elseif vim.fn.filereadable(cf_alt) == 1 then
+											return cf_alt
+										end
+										dir = vim.fn.fnamemodify(dir, ":h")
+									end
+									return nil
+								end
+
+								local file = find_clang_format(vim.fn.expand("%:p"))
+								local width = nil
+
+								if file then
+									for _, line in ipairs(vim.fn.readfile(file)) do
+										local w = line:match("IndentWidth:%s*(%d+)")
+										if w then
+											width = tonumber(w)
+											break
+										end
+									end
+								end
+
+								if width then
+									vim.bo.tabstop = width
+									vim.bo.shiftwidth = width
+									vim.bo.softtabstop = width
+								else
+									-- fallback if no config found
+									vim.bo.tabstop = 2
+									vim.bo.shiftwidth = 2
+									vim.bo.softtabstop = 2
+								end
+							end,
+						})
 					end
 				end,
 			})

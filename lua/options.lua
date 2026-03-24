@@ -1,37 +1,32 @@
--- [[ Setting options ]]
-
 local options = {
-	termguicolors = true, -- Enable terminal colors
-	number = true, -- Enable line numbers
-	relativenumber = true, -- Enable relative line numbers
-	mouse = "a", -- Enable mouse mode, can be useful for resizing splits for example!
-	showmode = false, -- Don't show the mode, since it's already in the status line
-	breakindent = true, -- Enable break indent
-	undofile = true, -- Save undo history
+	termguicolors = true, -- Keep colorschemes consistent with modern terminals.
+	number = true, -- Anchor navigation with absolute line numbers.
+	relativenumber = true, -- Make jump counts fast without losing position context.
+	mouse = "a", -- Allow split resizing and scroll support when needed.
+	showmode = false, -- Lualine already reports the current mode.
+	breakindent = true, -- Preserve indentation when wrapped text spills.
+	undofile = true, -- Keep undo history across restarts.
 
 	wrap = false,
 
-	-- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
+	-- Stay forgiving for lowercase searches while preserving exact-match escapes.
 	ignorecase = true,
 	smartcase = true,
 
-	-- Keep signcolumn on by default
+	-- Reserve the diagnostics column to avoid text shifting.
 	signcolumn = "yes",
 
-	-- Decrease update time
+	-- Make diagnostics and CursorHold reactions feel snappier.
 	updatetime = 250,
 
-	-- Decrease mapped sequence wait time
-	-- Displays which-key popup sooner
+	-- Show which-key hints sooner without making mappings twitchy.
 	timeoutlen = 300,
 
-	-- Configure how new splits should be opened
+	-- Open new panes where they least disrupt the current layout.
 	splitright = true,
 	splitbelow = true,
 
-	-- Sets how neovim will display certain whitespace characters in the editor.
-	--  See `:help 'list'`
-	--  and `:help 'listchars'`
+	-- Surface stray whitespace without filling the screen with markers.
 	list = true,
 	listchars = { tab = "  ", trail = " ", nbsp = "␣" },
 	tabstop = 2,
@@ -39,13 +34,13 @@ local options = {
 	softtabstop = 2,
 	expandtab = true,
 
-	-- Preview substitutions live, as you type!
+	-- Preview substitutions in a split before they are applied.
 	inccommand = "split",
 
-	-- Show which line your cursor is on
+	-- Keep the active line easy to track.
 	cursorline = true,
 
-	-- Minimal number of screen lines to keep above and below the cursor.
+	-- Avoid parking the cursor against the screen edge.
 	scrolloff = 10,
 }
 
@@ -53,13 +48,19 @@ for k, v in pairs(options) do
 	vim.opt[k] = v
 end
 
-vim.cmd([[
-  autocmd FileType cpp,c,h,hpp setlocal tabstop=2 shiftwidth=2 softtabstop=2 expandtab
-]])
+vim.api.nvim_create_autocmd("FileType", {
+	group = vim.api.nvim_create_augroup("user-c-style-defaults", { clear = true }),
+	pattern = { "c", "cpp", "h", "hpp" },
+	-- Default to two-space C-style indentation until a project formatter overrides it.
+	callback = function()
+		vim.opt_local.tabstop = 2
+		vim.opt_local.shiftwidth = 2
+		vim.opt_local.softtabstop = 2
+		vim.opt_local.expandtab = true
+	end,
+})
 
--- Sync clipboard between OS and Neovim.
---  Schedule the setting after `UiEnter` because it can increase startup-time.
---  See `:help 'clipboard'`
+-- Defer clipboard setup so startup stays cheap in terminal-only sessions.
 vim.schedule(function()
 	vim.opt.clipboard = "unnamedplus"
 end)

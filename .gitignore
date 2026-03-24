@@ -1,1 +1,4 @@
 .nvimlog
+*.log
+shada/
+.nettmp/

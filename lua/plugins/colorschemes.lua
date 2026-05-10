@@ -11,8 +11,6 @@ return {
 			vim.cmd.colorscheme("edge")
 
 			-- plugin highlight overrides (good for transparency)
-			vim.api.nvim_set_hl(0, "TelescopeNormal", { bg = "none" })
-			vim.api.nvim_set_hl(0, "TelescopeBorder", { fg = "#5c6370", bg = "none" })
 			vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "none" })
 			vim.api.nvim_set_hl(0, "NeoTreeNormalNC", { bg = "none" })
 			vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
@@ -32,11 +30,11 @@ return {
 				flavour = "mocha",
 				transparent_background = true,
 				integrations = {
-					cmp = true,
+					blink_cmp = true,
 					gitsigns = true,
 					nvimtree = true,
 					treesitter = true,
-					telescope = true,
+					fzf_lua = true,
 				},
 			})
 		end,
@@ -112,7 +110,7 @@ return {
 			inc_search = "background",
 			background_clear = {
 				"toggleterm",
-				"telescope",
+				"fzf-lua",
 				"renamer",
 				"notify",
 			},

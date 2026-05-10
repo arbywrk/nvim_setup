@@ -4,8 +4,6 @@ require("lazy").setup({
 		{ import = "plugins" },
 	},
 
-	opts = {},
-
 	defaults = {
 		lazy = false, -- not lazy by default
 		version = false, -- always use the latest version

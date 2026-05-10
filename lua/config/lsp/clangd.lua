@@ -1,4 +1,3 @@
-local util = require("lspconfig.util")
 local unpack_fn = table.unpack or unpack
 
 local M = {}
@@ -132,10 +131,22 @@ local function esp_toolchain_drivers()
 	end
 
 	local drivers = {}
-	vim.list_extend(drivers, glob_matches(vim.fn.expand("~/.espressif/tools/riscv32-esp-elf/*/riscv32-esp-elf/bin/riscv32-esp-elf-gcc")))
-	vim.list_extend(drivers, glob_matches(vim.fn.expand("~/.espressif/tools/riscv32-esp-elf/*/riscv32-esp-elf/bin/riscv32-esp-elf-g++")))
-	vim.list_extend(drivers, glob_matches(vim.fn.expand("~/.espressif/tools/xtensa-esp-elf/*/xtensa-esp-elf/bin/xtensa-esp-elf-gcc")))
-	vim.list_extend(drivers, glob_matches(vim.fn.expand("~/.espressif/tools/xtensa-esp-elf/*/xtensa-esp-elf/bin/xtensa-esp-elf-g++")))
+	vim.list_extend(
+		drivers,
+		glob_matches(vim.fn.expand("~/.espressif/tools/riscv32-esp-elf/*/riscv32-esp-elf/bin/riscv32-esp-elf-gcc"))
+	)
+	vim.list_extend(
+		drivers,
+		glob_matches(vim.fn.expand("~/.espressif/tools/riscv32-esp-elf/*/riscv32-esp-elf/bin/riscv32-esp-elf-g++"))
+	)
+	vim.list_extend(
+		drivers,
+		glob_matches(vim.fn.expand("~/.espressif/tools/xtensa-esp-elf/*/xtensa-esp-elf/bin/xtensa-esp-elf-gcc"))
+	)
+	vim.list_extend(
+		drivers,
+		glob_matches(vim.fn.expand("~/.espressif/tools/xtensa-esp-elf/*/xtensa-esp-elf/bin/xtensa-esp-elf-g++"))
+	)
 
 	resolved.esp_drivers = dedupe(drivers)
 	return resolved.esp_drivers
@@ -160,7 +171,12 @@ local function esp_cmd(root_dir)
 		table.insert(cmd, "--query-driver=" .. table.concat(drivers, ","))
 	end
 
-	if root_dir and root_dir ~= "" and root_dir ~= "." and not vim.uv.fs_stat(vim.fs.joinpath(root_dir, "build", "compile_commands.json")) then
+	if
+		root_dir
+		and root_dir ~= ""
+		and root_dir ~= "."
+		and not vim.uv.fs_stat(vim.fs.joinpath(root_dir, "build", "compile_commands.json"))
+	then
 		vim.notify_once(
 			"ESP-IDF project detected without build/compile_commands.json. Run idf.py reconfigure for better clangd results.",
 			vim.log.levels.WARN
@@ -185,7 +201,7 @@ function M.is_esp_root(root_dir)
 end
 
 function M.find_project_root(fname)
-	return util.root_pattern(unpack_fn(project_root_markers))(fname)
+	return vim.fs.root(unpack_fn(project_root_markers))(fname)
 end
 
 function M.esp_root_dir(bufnr, on_dir)

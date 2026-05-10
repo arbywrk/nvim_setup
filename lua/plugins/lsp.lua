@@ -5,13 +5,10 @@ return {
 		ft = "lua",
 		opts = {
 			library = {
-				-- Load luvit types only when `vim.uv` is in play.
-				{ path = "luvit-meta/library", words = { "vim%.uv" } },
 				"nvim-dap-ui",
 			},
 		},
 	},
-	{ "Bilal2453/luvit-meta", lazy = true },
 	{
 		-- Centralize LSP defaults, installs, and per-server overrides.
 		"neovim/nvim-lspconfig",
@@ -24,7 +21,6 @@ return {
 			"williamboman/mason-lspconfig.nvim",
 			"WhoIsSethDaniel/mason-tool-installer.nvim",
 			{ "j-hui/fidget.nvim", opts = {} },
-			"hrsh7th/cmp-nvim-lsp",
 		},
 		config = function()
 			local clangd = require("config.lsp.clangd")
@@ -93,8 +89,7 @@ return {
 				end,
 			})
 
-			local capabilities = vim.lsp.protocol.make_client_capabilities()
-			capabilities = vim.tbl_deep_extend("force", capabilities, require("cmp_nvim_lsp").default_capabilities())
+			local capabilities = require("blink.cmp").get_lsp_capabilities()
 			local clangd_servers = clangd.server_configs(vim.lsp.config.clangd)
 
 			local servers = {

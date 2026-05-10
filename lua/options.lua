@@ -4,6 +4,7 @@ local options = {
 	relativenumber = true, -- Make jump counts fast without losing position context.
 	mouse = "a", -- Allow split resizing and scroll support when needed.
 	showmode = false, -- Lualine already reports the current mode.
+	cmdheight = 0,
 	breakindent = true, -- Preserve indentation when wrapped text spills.
 	undofile = true, -- Keep undo history across restarts.
 

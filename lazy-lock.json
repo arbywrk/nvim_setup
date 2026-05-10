@@ -21,6 +21,8 @@
   "mini.nvim": { "branch": "main", "commit": "9d359222b3643f1fccbd8f3180445842e1cae00b" },
   "monokai-pro.nvim": { "branch": "master", "commit": "d8884d4473667c48bd17a68d08383d38839136a3" },
   "neo-tree.nvim": { "branch": "main", "commit": "ba6871d15528e36657d19a3112cc1697c59da19a" },
+  "neotest": { "branch": "master", "commit": "ad991822b7076b1d940b33a9d6d0d30416d5df81" },
+  "neotest-python": { "branch": "master", "commit": "e6df4f1892f6137f58135917db24d1655937d831" },
   "nui.nvim": { "branch": "main", "commit": "de740991c12411b663994b2860f1a4fd0937c130" },
   "nvim-colorizer.lua": { "branch": "master", "commit": "a065833f35a3a7cc3ef137ac88b5381da2ba302e" },
   "nvim-dap": { "branch": "master", "commit": "a9d8cb68ee7184111dc66156c4a2ebabfbe01bc5" },

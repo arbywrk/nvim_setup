@@ -55,4 +55,3 @@ vim.keymap.set("n", "<leader>ut", function()
 	print("Switched to " .. vim.o.background .. " mode")
 end, { desc = "Toggle Light/Dark Mode" })
 
--- vim: ts=2 sts=2 sw=2 et

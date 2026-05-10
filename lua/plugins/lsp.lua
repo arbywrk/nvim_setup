@@ -89,42 +89,38 @@ return {
 			local clangd_servers = clangd.server_configs(vim.lsp.config.clangd)
 
 			local servers = {
-				gopls = {
-					settings = {
-						gopls = {
-							analyses = {
-								unusedparams = true,
-							},
-							staticcheck = true,
-							gofumpt = true,
-						},
-					},
-				},
-
 				clangd = clangd_servers.clangd,
 				esp_clangd = clangd_servers.esp_clangd,
 				ts_ls = {},
-
-				rust_analyzer = {
+				zls = {},
+				bashls = {},
+				html = {},
+				cssls = {},
+				emmet_language_server = {
+					filetypes = {
+						"html", "css", "scss",
+						"javascript", "javascriptreact",
+						"typescript", "typescriptreact",
+					},
+				},
+				basedpyright = {
 					settings = {
-						["rust-analyzer"] = {
-							cargo = {
-								allFeatures = true,
-							},
-							checkOnSave = {
-								command = "clippy",
+						basedpyright = {
+							analysis = {
+								typeCheckingMode = "standard",
+								autoSearchPaths = true,
+								useLibraryCodeForTypes = true,
 							},
 						},
 					},
 				},
-
+				kotlin_language_server = {},
 				lua_ls = {
 					settings = {
 						Lua = {
 							completion = {
 								callSnippet = "Replace",
 							},
-							-- diagnostics = { disable = { 'missing-fields' } },
 						},
 					},
 				},
@@ -133,16 +129,27 @@ return {
 			require("mason").setup()
 
 			local ensure_installed = {
-				"gopls",
+				-- LSP servers
 				"clangd",
 				"ts_ls",
 				"rust_analyzer",
 				"lua_ls",
-			}
-			vim.list_extend(ensure_installed, {
+				"zls",
+				"basedpyright",
+				"kotlin_language_server",
+				"bashls",
+				"html",
+				"cssls",
+				"emmet_language_server",
+				-- Formatters / linters
 				"stylua",
 				"clang-format",
-			})
+				"prettierd",
+				"shfmt",
+				"ktlint",
+				"ruff",
+				"shellcheck",
+			}
 			require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
 
 			-- Disable Mason's automatic vim.lsp.enable path so our custom configs win.

@@ -29,9 +29,9 @@ local options = {
 	-- Surface stray whitespace without filling the screen with markers.
 	list = true,
 	listchars = { tab = "  ", trail = " ", nbsp = "␣" },
-	tabstop = 2,
-	shiftwidth = 2,
-	softtabstop = 2,
+	tabstop = 4,
+	shiftwidth = 4,
+	softtabstop = 4,
 	expandtab = true,
 
 	-- Preview substitutions in a split before they are applied.
@@ -47,18 +47,6 @@ local options = {
 for k, v in pairs(options) do
 	vim.opt[k] = v
 end
-
-vim.api.nvim_create_autocmd("FileType", {
-	group = vim.api.nvim_create_augroup("user-c-style-defaults", { clear = true }),
-	pattern = { "c", "cpp", "h", "hpp" },
-	-- Default to two-space C-style indentation until a project formatter overrides it.
-	callback = function()
-		vim.opt_local.tabstop = 2
-		vim.opt_local.shiftwidth = 2
-		vim.opt_local.softtabstop = 2
-		vim.opt_local.expandtab = true
-	end,
-})
 
 -- Defer clipboard setup so startup stays cheap in terminal-only sessions.
 vim.schedule(function()

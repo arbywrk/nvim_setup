@@ -1,11 +1,10 @@
 return {
 	{
 		"nvim-treesitter/nvim-treesitter",
-		branch = "master",
+		branch = "main",
 		build = ":TSUpdate",
-		main = "nvim-treesitter.configs",
-		opts = {
-			ensure_installed = {
+		config = function()
+			require("nvim-treesitter").install({
 				"bash",
 				"c",
 				"cpp",
@@ -28,13 +27,7 @@ return {
 				"rust",
 				"ron",
 				"zig",
-			},
-			auto_install = true,
-			highlight = {
-				enable = true,
-				additional_vim_regex_highlighting = { "ruby" },
-			},
-			indent = { enable = true, disable = { "ruby" } },
-		},
+			})
+		end,
 	},
 }

@@ -201,7 +201,7 @@ function M.is_esp_root(root_dir)
 end
 
 function M.find_project_root(fname)
-	return vim.fs.root(unpack_fn(project_root_markers))(fname)
+	return vim.fs.root(fname, project_root_markers)
 end
 
 function M.esp_root_dir(bufnr, on_dir)

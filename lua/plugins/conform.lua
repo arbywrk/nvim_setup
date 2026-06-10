@@ -1,3 +1,5 @@
+local prettierd = vim.fn.executable("node") == 1 and { "prettierd" } or {}
+
 return {
 	{
 		"stevearc/conform.nvim",
@@ -29,14 +31,15 @@ return {
 				sh = { "shfmt" },
 				bash = { "shfmt" },
 				kotlin = { "ktlint" },
-				javascript = { "prettierd" },
-				javascriptreact = { "prettierd" },
-				typescript = { "prettierd" },
-				typescriptreact = { "prettierd" },
-				html = { "prettierd" },
-				css = { "prettierd" },
-				scss = { "prettierd" },
-				json = { "prettierd" },
+				javascript = prettierd,
+				javascriptreact = prettierd,
+				typescript = prettierd,
+				typescriptreact = prettierd,
+				html = prettierd,
+				css = prettierd,
+				scss = prettierd,
+				json = prettierd,
+				svelte = prettierd,
 			},
 		},
 	},

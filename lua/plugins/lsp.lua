@@ -27,6 +27,29 @@ return {
 			local attach_group = vim.api.nvim_create_augroup("user-lsp-attach", { clear = true })
 			local highlight_group = vim.api.nvim_create_augroup("user-lsp-highlight", { clear = false })
 			local detach_group = vim.api.nvim_create_augroup("user-lsp-detach", { clear = false })
+			local svelte_group = vim.api.nvim_create_augroup("user-svelte-lsp", { clear = true })
+			local svelte_change_notifier_registered = false
+			local has_node = vim.fn.executable("node") == 1
+			local has_npm = vim.fn.executable("npm") == 1
+
+			local function register_svelte_change_notifier()
+				if svelte_change_notifier_registered then
+					return
+				end
+
+				svelte_change_notifier_registered = true
+				vim.api.nvim_create_autocmd("BufWritePost", {
+					group = svelte_group,
+					pattern = { "*.js", "*.jsx", "*.ts", "*.tsx", "*.svelte" },
+					callback = function(ctx)
+						for _, svelte_client in ipairs(vim.lsp.get_clients({ name = "svelte" })) do
+							svelte_client.notify("$/onDidChangeTsOrJsFile", {
+								uri = vim.uri_from_fname(ctx.file),
+							})
+						end
+					end,
+				})
+			end
 
 			vim.api.nvim_create_autocmd("LspAttach", {
 				group = attach_group,
@@ -81,6 +104,11 @@ return {
 							vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = event.buf }))
 						end, "[T]oggle Inlay [H]ints")
 					end
+
+					if client.name == "svelte" then
+						register_svelte_change_notifier()
+					end
+
 					clangd.on_attach(client, event.buf)
 				end,
 			})
@@ -91,18 +119,8 @@ return {
 			local servers = {
 				clangd = clangd_servers.clangd,
 				esp_clangd = clangd_servers.esp_clangd,
-				ts_ls = {},
 				zls = {},
 				bashls = {},
-				html = {},
-				cssls = {},
-				emmet_language_server = {
-					filetypes = {
-						"html", "css", "scss",
-						"javascript", "javascriptreact",
-						"typescript", "typescriptreact",
-					},
-				},
 				basedpyright = {
 					settings = {
 						basedpyright = {
@@ -126,6 +144,47 @@ return {
 				},
 			}
 
+			if has_node then
+				servers.ts_ls = {}
+				servers.svelte = {
+					settings = {
+						svelte = {
+							plugin = {
+								svelte = {
+									format = {
+										enable = false,
+									},
+								},
+							},
+						},
+					},
+				}
+				servers.html = {}
+				servers.cssls = {}
+				servers.eslint = {
+					filetypes = {
+						"javascript",
+						"javascriptreact",
+						"typescript",
+						"typescriptreact",
+						"svelte",
+					},
+				}
+				servers.emmet_language_server = {
+					filetypes = {
+						"html", "css", "scss",
+						"javascript", "javascriptreact",
+						"typescript", "typescriptreact",
+						"svelte",
+					},
+				}
+			else
+				vim.notify_once(
+					"Node.js is not on PATH. Skipping TypeScript, HTML, CSS, ESLint, and Emmet LSP servers.",
+					vim.log.levels.WARN
+				)
+			end
+
 			require("mason").setup()
 
 			local ensure_installed = {
@@ -138,18 +197,32 @@ return {
 				"basedpyright",
 				"kotlin_language_server",
 				"bashls",
-				"html",
-				"cssls",
-				"emmet_language_server",
 				-- Formatters / linters
 				"stylua",
 				"clang-format",
-				"prettierd",
 				"shfmt",
 				"ktlint",
 				"ruff",
 				"shellcheck",
 			}
+
+			if has_npm then
+				vim.list_extend(ensure_installed, {
+					"ts_ls",
+					"html",
+					"cssls",
+					"emmet_language_server",
+					"svelte-language-server",
+					"eslint-lsp",
+					"prettierd",
+				})
+			else
+				vim.notify_once(
+					"npm is not on PATH. Skipping Mason installs for Svelte, ESLint, web LSPs, and prettierd.",
+					vim.log.levels.WARN
+				)
+			end
+
 			require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
 
 			-- Disable Mason's automatic vim.lsp.enable path so our custom configs win.

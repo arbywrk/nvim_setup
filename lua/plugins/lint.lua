@@ -5,6 +5,7 @@ return {
 		config = function()
 			local lint = require("lint")
 			lint.linters_by_ft = {
+				json = { "json_tool" },
 				sh = { "shellcheck" },
 				bash = { "shellcheck" },
 			}

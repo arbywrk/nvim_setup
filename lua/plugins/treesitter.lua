@@ -27,6 +27,7 @@ return {
 				"vimdoc",
 				"rust",
 				"ron",
+				"sql",
 				"zig",
 			})
 		end,

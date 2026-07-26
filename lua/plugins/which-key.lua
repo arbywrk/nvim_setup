@@ -57,12 +57,18 @@ return {
             -- Document existing key chains
             spec = {
                 { "<leader>c", group = "[C]ode", mode = { "n", "x" } },
-                { "<leader>d", group = "[D]ebugger" },
                 { "<leader>r", group = "[R]ename" },
                 { "<leader>s", group = "[S]earch" },
                 { "<leader>w", group = "[W]orkspace" },
                 { "<leader>t", group = "[T]oggle" },
                 { "<leader>h", group = "Git [H]unk", mode = { "n", "v" } },
+
+                -- Debug controls
+                { "<leader>d", group = "[D]ebugger" },
+                { "<Up>", desc = "Debug Continue" },
+                { "<Down>", desc = "Debug Step Over" },
+                { "<Left>", desc = "Debug Step Out" },
+                { "<Right>", desc = "Debug Step Into" },
             },
         },
     },

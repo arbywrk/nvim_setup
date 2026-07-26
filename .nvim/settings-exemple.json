@@ -1,0 +1,25 @@
+{
+  "compiler": {
+    "cc": "",
+    "cxx": ""
+  },
+  "build": {
+    "command": "",
+    "args": []
+  },
+  "debugger": {
+    "program": "",
+    "gdb": "",
+    "target": "",
+    "server": {
+      "command": "",
+      "args": [],
+      "startup_delay": 500
+    },
+    "gdbinit": ""
+  },
+  "lsp": {
+    "clangd": "",
+    "compile_commands": ""
+  }
+}

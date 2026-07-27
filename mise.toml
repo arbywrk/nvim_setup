@@ -1,0 +1,16 @@
+[tools]
+lua = "5.4"
+stylua = "latest"
+lua-language-server = "latest"
+ripgrep = "latest"
+fd = "latest"
+node = "22"
+
+[tasks.format]
+run = "stylua ."
+
+[tasks.check]
+run = "luac -p $(find lua -name '*.lua')"
+
+[tasks.update]
+run = "nvim --headless '+Lazy! sync' +qa"

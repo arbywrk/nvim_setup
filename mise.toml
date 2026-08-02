@@ -5,6 +5,7 @@ lua-language-server = "latest"
 ripgrep = "latest"
 fd = "latest"
 node = "22"
+yazi = "latest"
 
 [tasks.format]
 run = "stylua ."

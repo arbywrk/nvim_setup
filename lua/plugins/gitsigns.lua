@@ -109,7 +109,7 @@ return {
 
             map("n", "<leader>gS", confirm("Stage every change in this file?", gs.stage_buffer), "Git: Stage buffer")
 
-            map("n", "<leader>gu", gitsigns.undo_stage_hunk, "Git: Undo stage")
+            map("n", "<leader>gu", gs.undo_stage_hunk, "Git: Undo stage")
 
             ------------------------------------------------------------------
             -- Reset
@@ -169,7 +169,7 @@ return {
 
             map("n", "<leader>tb", gs.toggle_current_line_blame, "Toggle Git blame")
 
-            map("n", "<leader>tD", gitsigns.toggle_deleted, "Toggle deleted lines")
+            map("n", "<leader>tD", gs.toggle_deleted, "Toggle deleted lines")
 
             map("n", "<leader>tw", gs.toggle_word_diff, "Toggle word diff")
 

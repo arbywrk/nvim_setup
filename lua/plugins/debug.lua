@@ -1,15 +1,45 @@
 -----------------------------------------------------------------------
+-- Hardcoded debug targets
+--
+-- Everything project-specific lives here, in one place. Changing
+-- projects means editing these tables, not learning a configuration
+-- system. Once this has been used for a week or two and it's clear
+-- what actually varies between projects, THEN it's worth promoting
+-- some of these fields into a .nvim/settings.json format designed
+-- around real usage instead of anticipated needs.
+-----------------------------------------------------------------------
+
+local native = {
+    gdb = "gdb",
+}
+
+local embedded = {
+    gdb = "arm-none-eabi-gdb",
+    target = "localhost:3333",
+    connect_timeout_ms = 5000,
+}
+
+local openocd = {
+    command = "openocd",
+    args = {
+        "-f",
+        "interface/stlink.cfg",
+        "-f",
+        "target/stm32f4x.cfg",
+    },
+}
+
+-----------------------------------------------------------------------
 -- Debug state
 -----------------------------------------------------------------------
 
 local state = {
     program = nil,
-    gdb = nil,
-    server = nil,
+    server = nil, -- vim.system handle for a running OpenOCD process
 }
 
 -----------------------------------------------------------------------
--- Executable discovery
+-- Executable discovery (unchanged -- this part already works well)
 -----------------------------------------------------------------------
 
 local function is_executable(path)
@@ -73,104 +103,13 @@ local function discover_executables()
 end
 
 -----------------------------------------------------------------------
--- Project-local settings (.nvim/settings.json)
------------------------------------------------------------------------
-
-local function find_upward(relative_path)
-    local dir = vim.fn.getcwd()
-
-    while dir and dir ~= "" do
-        local candidate = dir .. "/" .. relative_path
-
-        if vim.uv.fs_stat(candidate) then
-            return candidate
-        end
-
-        local parent = vim.fs.dirname(dir)
-
-        if parent == dir then
-            break
-        end
-
-        dir = parent
-    end
-
-    return nil
-end
-
-local function settings_path()
-    return find_upward(".nvim/settings.json") or (vim.fn.getcwd() .. "/.nvim/settings.json")
-end
-
-local function read_settings()
-    local path = settings_path()
-
-    if not vim.uv.fs_stat(path) then
-        return {}
-    end
-
-    local ok, lines = pcall(vim.fn.readfile, path)
-    if not ok then
-        return {}
-    end
-
-    local ok2, decoded = pcall(vim.json.decode, table.concat(lines, "\n"))
-
-    if not ok2 or type(decoded) ~= "table" then
-        return {}
-    end
-
-    return decoded
-end
-
-local function write_settings(settings)
-    local path = settings_path()
-    local dir = vim.fs.dirname(path)
-
-    if not vim.uv.fs_stat(dir) then
-        vim.fn.mkdir(dir, "p")
-    end
-
-    local ok, encoded = pcall(vim.json.encode, settings)
-
-    if not ok then
-        vim.notify("Failed writing settings.json", vim.log.levels.ERROR)
-        return
-    end
-
-    vim.fn.writefile(vim.split(encoded, "\n"), path)
-end
-
------------------------------------------------------------------------
--- Debugger settings
------------------------------------------------------------------------
-
-local function project_debug_settings()
-    return read_settings().debugger or {}
-end
-
------------------------------------------------------------------------
 -- Program selection
+--
+-- No more reading a program path out of settings.json -- just cache
+-- the last choice and re-discover / re-prompt when asked to.
 -----------------------------------------------------------------------
 
 local function choose_program(force)
-    local settings = project_debug_settings()
-
-    if not force and settings.program then
-        local path = settings.program
-
-        if not vim.startswith(path, "/") then
-            path = vim.fn.getcwd() .. "/" .. path
-        end
-
-        path = vim.fs.normalize(path)
-
-        if vim.uv.fs_stat(path) then
-            state.program = path
-            return path
-        end
-    end
-
     if not force and state.program and vim.uv.fs_stat(state.program) then
         return state.program
     end
@@ -207,64 +146,79 @@ local function choose_program(force)
 end
 
 -----------------------------------------------------------------------
--- GDB selection
+-- Health checks
+--
+-- Fail loudly and immediately, before DAP has started anything, not
+-- partway through a launch sequence.
 -----------------------------------------------------------------------
 
-local function choose_gdb(force)
-    local settings = project_debug_settings()
-
-    if not force and settings.gdb and vim.fn.executable(settings.gdb) == 1 then
-        state.gdb = settings.gdb
-        return state.gdb
+local function check_executable(path, label)
+    if vim.fn.executable(path) == 0 then
+        error(("%s not found on PATH: %s"):format(label, path))
     end
+end
 
-    if not force and state.gdb and vim.fn.executable(state.gdb) == 1 then
-        return state.gdb
+local function check_file(path, label)
+    if not path or path == "" or not vim.uv.fs_stat(path) then
+        error(("%s not found: %s"):format(label, tostring(path)))
     end
-
-    state.gdb = vim.fn.input("GDB executable: ", state.gdb or "gdb")
-
-    if state.gdb == "" then
-        state.gdb = "gdb"
-    end
-
-    return state.gdb
 end
 
 -----------------------------------------------------------------------
--- Generic debug server
+-- Wait for a TCP server to accept connections
+--
+-- Replaces the old vim.wait(500) guess with an actual connect loop,
+-- polling until it succeeds or the timeout elapses.
 -----------------------------------------------------------------------
 
-local function start_server()
-    if state.server then
-        return
+local function wait_for_tcp(target, timeout_ms)
+    local host, port = target:match("^(.-):(%d+)$")
+    port = tonumber(port)
+
+    if not host or not port then
+        error("Invalid target address: " .. tostring(target))
     end
 
-    local settings = project_debug_settings()
-    local server = settings.server
+    local deadline = vim.uv.now() + timeout_ms
 
-    if not server then
-        return
+    while vim.uv.now() < deadline do
+        local client = vim.uv.new_tcp()
+
+        if not client then
+            error("Could not create a TCP handle (vim.uv.new_tcp() failed)")
+        end
+
+        local connected = false
+        local finished = false
+
+        client:connect(host, port, function(err)
+            connected = (err == nil)
+            finished = true
+
+            if not client:is_closing() then
+                client:close()
+            end
+        end)
+
+        vim.wait(200, function()
+            return finished
+        end, 20)
+
+        if connected then
+            return true
+        end
     end
 
-    local command = server.command
-
-    if not command or command == "" then
-        vim.notify("Debugger server has no command configured.", vim.log.levels.ERROR)
-        return
-    end
-
-    local args = server.args or {}
-
-    vim.notify("Starting debug server: " .. command, vim.log.levels.INFO)
-
-    state.server = vim.system(vim.list_extend({ command }, args), {
-        cwd = vim.fn.getcwd(),
-        detach = true,
-    })
-
-    vim.wait(server.startup_delay or 500)
+    return false
 end
+
+-----------------------------------------------------------------------
+-- OpenOCD lifecycle
+--
+-- Kills any server left running from a previous crashed session
+-- before starting a fresh one, then blocks (with a real timeout)
+-- until it is actually accepting connections.
+-----------------------------------------------------------------------
 
 local function stop_server()
     if not state.server then
@@ -278,30 +232,24 @@ local function stop_server()
     state.server = nil
 end
 
------------------------------------------------------------------------
--- Project-local dap.lua
------------------------------------------------------------------------
+local function start_openocd()
+    stop_server() -- in case a previous session died without cleaning up
 
-local function load_project_dap_config()
-    local path = find_upward(".nvim/dap.lua")
+    check_executable(openocd.command, "OpenOCD")
 
-    if not path then
-        return nil
+    vim.notify("Starting OpenOCD...", vim.log.levels.INFO)
+
+    state.server =
+        vim.system(vim.list_extend({ openocd.command }, openocd.args), { cwd = vim.fn.getcwd(), detach = true })
+
+    vim.notify(("Connecting to %s..."):format(embedded.target), vim.log.levels.INFO)
+
+    if not wait_for_tcp(embedded.target, embedded.connect_timeout_ms) then
+        stop_server()
+        error(("Timed out waiting for OpenOCD to open %s"):format(embedded.target))
     end
 
-    local ok, result = pcall(dofile, path)
-
-    if not ok then
-        vim.notify("Failed loading " .. path .. "\n\n" .. tostring(result), vim.log.levels.ERROR)
-        return nil
-    end
-
-    if type(result) ~= "table" then
-        vim.notify(path .. " must return a table.", vim.log.levels.ERROR)
-        return nil
-    end
-
-    return result
+    vim.notify("OpenOCD ready.", vim.log.levels.INFO)
 end
 
 -----------------------------------------------------------------------
@@ -322,10 +270,6 @@ end
 
 local function continue_with_confirmation()
     local dap = require("dap")
-
-    if _G.NvimDapSyncConfigurations then
-        _G.NvimDapSyncConfigurations()
-    end
 
     if dap.session() == nil and not has_breakpoints() then
         local choice = vim.fn.confirm("No breakpoints are set.\nRun anyway?", "&Yes\n&No", 2)
@@ -435,24 +379,13 @@ return {
             end,
             desc = "Debug: Toggle UI",
         },
-
         {
             "<leader>de",
             function()
-                state.program = nil
                 choose_program(true)
-                vim.notify("Executable: " .. state.program)
+                vim.notify("Executable: " .. tostring(state.program))
             end,
             desc = "Debug: Select executable",
-        },
-        {
-            "<leader>dg",
-            function()
-                state.gdb = nil
-                choose_gdb(true)
-                vim.notify("GDB: " .. state.gdb)
-            end,
-            desc = "Debug: Select GDB executable",
         },
         {
             "<leader>db",
@@ -496,9 +429,11 @@ return {
             icons = {
                 expanded = "",
                 collapsed = "",
-                current_frame = "",
+                current_frame = "󰁕",
             },
             controls = {
+                enabled = true,
+                element = "repl",
                 icons = {
                     pause = "󰏤",
                     play = "󰐊",
@@ -511,29 +446,116 @@ return {
                     disconnect = "󰿅",
                 },
             },
+
+            wrap = true,
+            expand_lines = true,
+            force_buffers = true,
+
+            mappings = {
+                expand = { "<CR>", "<2-LeftMouse>" },
+                open = "o",
+                remove = "d",
+                edit = "e",
+                repl = "r",
+                toggle = "t",
+            },
+
+            -- per-element mapping overrides; empty means "use `mappings` above
+            -- everywhere" -- explicit here so the type is fully satisfied
+            -- rather than relying on dapui filling in a default.
+            element_mappings = {},
+
+            ------------------------------------------------------------
+            -- Layout: left sidebar for state, bottom panel for I/O --
+            -- this is the part that actually makes it feel like an
+            -- IDE's debug view instead of a single floating window.
+            ------------------------------------------------------------
+            layouts = {
+                {
+                    elements = {
+                        { id = "scopes", size = 0.40 },
+                        { id = "breakpoints", size = 0.20 },
+                        { id = "stacks", size = 0.20 },
+                        { id = "watches", size = 0.20 },
+                    },
+                    size = 45,
+                    position = "left",
+                },
+                {
+                    elements = {
+                        { id = "repl", size = 0.55 },
+                        { id = "console", size = 0.45 },
+                    },
+                    size = 12,
+                    position = "bottom",
+                },
+            },
+
+            floating = {
+                max_height = 0.7,
+                max_width = 0.6,
+                border = "rounded",
+                mappings = {
+                    close = { "q", "<Esc>" },
+                },
+            },
+
+            render = {
+                max_type_length = nil,
+                max_value_lines = 100,
+                indent = 1,
+            },
         })
 
         ------------------------------------------------------------------------
-        -- Signs
+        -- Inline virtual text (variable values shown next to the line while
+        -- stepping, like most IDEs). This plugin was already listed as a
+        -- dependency but never actually configured -- without setup() it
+        -- does nothing.
+        ------------------------------------------------------------------------
+
+        require("nvim-dap-virtual-text").setup({
+            enabled = true,
+            highlight_changed_variables = true,
+            highlight_new_as_changed = true,
+            show_stop_reason = true,
+            commented = false,
+            virt_text_pos = "eol",
+            all_frames = false,
+        })
+
+        ------------------------------------------------------------------------
+        -- Signs & highlights
         ------------------------------------------------------------------------
 
         vim.api.nvim_set_hl(0, "DapBreak", { fg = "#e51400" })
-        vim.api.nvim_set_hl(0, "DapStop", { fg = "#ffcc00" })
+        vim.api.nvim_set_hl(0, "DapStop", { fg = "#ffcc00", bold = true })
+        vim.api.nvim_set_hl(0, "DapStoppedLine", { bg = "#3d3300" })
+        vim.api.nvim_set_hl(0, "DapUIVariable", { fg = "#c5c8c6" })
+        vim.api.nvim_set_hl(0, "DapUIValue", { fg = "#8abeb7" })
+        vim.api.nvim_set_hl(0, "DapUIScope", { fg = "#81a2be", bold = true })
+        vim.api.nvim_set_hl(0, "DapUIType", { fg = "#b294bb" })
+        vim.api.nvim_set_hl(0, "DapUIWatchesValue", { fg = "#b5bd68" })
+        vim.api.nvim_set_hl(0, "DapUIBreakpointsPath", { fg = "#81a2be" })
+        vim.api.nvim_set_hl(0, "DapUIBreakpointsInfo", { fg = "#b5bd68" })
+        vim.api.nvim_set_hl(0, "DapUIFrameName", { fg = "#c5c8c6" })
+        vim.api.nvim_set_hl(0, "DapUIThread", { fg = "#b5bd68", bold = true })
+        vim.api.nvim_set_hl(0, "DapUIStoppedThread", { fg = "#ffcc00", bold = true })
 
         local breakpoint_icons = vim.g.have_nerd_font
                 and {
-                    Breakpoint = "",
-                    BreakpointCondition = "",
-                    BreakpointRejected = "",
+                    Breakpoint = "󰃤",
+                    BreakpointCondition = "󰘥",
+                    BreakpointRejected = "󰚌",
                     LogPoint = "󰍩",
-                    Stopped = "",
+                    Stopped = "󰁕",
                 }
             or {
                 Breakpoint = "●",
-                BreakpointCondition = "⊜",
-                BreakpointRejected = "⊘",
+                BreakpointCondition = "?",
+                BreakpointRejected = "×",
                 LogPoint = "◆",
-                Stopped = "⭔",
+                Stopped = "▶",
             }
 
         for kind, icon in pairs(breakpoint_icons) do
@@ -543,15 +565,23 @@ return {
                 text = icon,
                 texthl = hl,
                 numhl = hl,
+                -- highlight the full stopped line, like an IDE execution marker
+                linehl = kind == "Stopped" and "DapStoppedLine" or nil,
             })
         end
 
         ------------------------------------------------------------------------
         -- UI lifecycle
+        --
+        -- OpenOCD is only started for the embedded ("attach") session --
+        -- native GDB and CodeLLDB launches never touch it.
         ------------------------------------------------------------------------
 
-        dap.listeners.before.launch["debug_server"] = start_server
-        dap.listeners.before.attach["debug_server"] = start_server
+        dap.listeners.before.attach["openocd"] = function(_, body)
+            if body and body.type == "gdb_embedded" then
+                start_openocd()
+            end
+        end
 
         dap.listeners.after.event_initialized["dapui"] = function()
             dapui.open()
@@ -569,6 +599,10 @@ return {
 
         ------------------------------------------------------------------------
         -- Adapters
+        --
+        -- adapter / launch / attach kept as separate, named pieces so a
+        -- broken adapter is easy to tell apart from a broken launch
+        -- request when something goes wrong.
         ------------------------------------------------------------------------
 
         dap.adapters.codelldb = {
@@ -580,22 +614,42 @@ return {
             },
         }
 
-        dap.adapters.gdb = function(callback, config)
-            local settings = project_debug_settings()
+        local function gdb_native_adapter(callback)
+            check_executable(native.gdb, "GDB")
 
             callback({
-                id = "gdb",
+                id = "gdb_native",
                 type = "executable",
-                command = config.gdbPath or settings.gdb or choose_gdb(false),
-                args = {
-                    "--quiet",
-                    "--interpreter=dap",
-                },
+                command = native.gdb,
+                args = { "--quiet", "--interpreter=dap" },
             })
         end
 
+        local function gdb_embedded_adapter(callback)
+            check_executable(embedded.gdb, "GDB (embedded)")
+
+            callback({
+                id = "gdb_embedded",
+                type = "executable",
+                command = embedded.gdb,
+                args = { "--quiet", "--interpreter=dap" },
+            })
+        end
+
+        dap.adapters.gdb_native = function(callback)
+            gdb_native_adapter(callback)
+        end
+
+        dap.adapters.gdb_embedded = function(callback)
+            gdb_embedded_adapter(callback)
+        end
+
         ------------------------------------------------------------------------
-        -- Built-in launch configurations
+        -- Launch / attach configurations
+        --
+        -- Three explicit configurations, no hidden branching between
+        -- native and embedded. Each prints what it's about to do and
+        -- checks its own preconditions before DAP starts anything.
         ------------------------------------------------------------------------
 
         local function codelldb_launch()
@@ -603,89 +657,67 @@ return {
                 name = "Launch (CodeLLDB)",
                 type = "codelldb",
                 request = "launch",
-
                 program = function()
-                    return choose_program(false)
+                    local program = choose_program(false)
+                    check_file(program, "Program")
+                    vim.notify("Program: " .. program)
+                    return program
                 end,
-
                 cwd = "${workspaceFolder}",
                 stopOnEntry = false,
                 runInTerminal = false,
             }
         end
 
-        local function gdb_launch()
-            local settings = project_debug_settings()
-
-            local cfg = {
-                name = "Launch (GDB)",
-                type = "gdb",
+        local function gdb_native_launch()
+            return {
+                name = "Launch (GDB Native)",
+                type = "gdb_native",
                 request = "launch",
-
                 program = function()
-                    return choose_program(false)
+                    local program = choose_program(false)
+                    check_file(program, "Program")
+                    vim.notify("Using " .. native.gdb)
+                    vim.notify("Program: " .. program)
+                    return program
                 end,
-
                 cwd = "${workspaceFolder}",
-
-                target = settings.target,
-
-                gdbPath = settings.gdb,
-
                 stopAtBeginningOfMainSubprogram = false,
             }
-
-            if settings.gdbinit and settings.gdbinit ~= "" then
-                cfg.setupCommands = {
-                    {
-                        text = "source " .. settings.gdbinit,
-                    },
-                }
-            end
-
-            return cfg
         end
 
-        ------------------------------------------------------------------------
-        -- Configuration sync
-        ------------------------------------------------------------------------
-
-        _G.NvimDapSyncConfigurations = function()
-            dap.configurations.c = {
-                codelldb_launch(),
-                gdb_launch(),
+        local function openocd_attach()
+            return {
+                name = "Attach (OpenOCD)",
+                type = "gdb_embedded",
+                request = "attach",
+                target = embedded.target,
+                program = function()
+                    local program = choose_program(false)
+                    check_file(program, "Program")
+                    vim.notify("Using " .. embedded.gdb)
+                    vim.notify("Program: " .. program)
+                    return program
+                end,
+                cwd = "${workspaceFolder}",
             }
-
-            dap.configurations.cpp = {
-                codelldb_launch(),
-                gdb_launch(),
-            }
-
-            dap.configurations.zig = {
-                codelldb_launch(),
-            }
-
-            local project = load_project_dap_config()
-
-            if project then
-                for ft, configs in pairs(project) do
-                    dap.configurations[ft] = dap.configurations[ft] or {}
-                    vim.list_extend(dap.configurations[ft], configs)
-                end
-            end
         end
 
-        ------------------------------------------------------------------------
-        -- Helpers for .nvim/dap.lua
-        ------------------------------------------------------------------------
-
-        _G.NvimDapHelpers = {
-            choose_program = choose_program,
-            choose_gdb = choose_gdb,
-            settings = project_debug_settings,
+        dap.configurations.c = {
+            codelldb_launch(),
+            gdb_native_launch(),
+            openocd_attach(),
         }
 
-        _G.NvimDapSyncConfigurations()
+        dap.configurations.cpp = {
+            codelldb_launch(),
+            gdb_native_launch(),
+            openocd_attach(),
+        }
+
+        dap.configurations.zig = {
+            codelldb_launch(),
+        }
 
         ------------------------------------------------------------------------
         -- Python (debugpy)
@@ -707,9 +739,7 @@ return {
                 name = "Launch Kotlin",
                 type = "kotlin",
                 request = "launch",
-
                 projectRoot = "${workspaceFolder}",
-
                 mainClass = function()
                     return vim.fn.input("Main class (e.g. com.example.MainKt): ")
                 end,

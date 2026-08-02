@@ -39,5 +39,17 @@ return {
         --
         -- More details: https://github.com/mikavilpas/yazi.nvim/issues/802
         vim.g.loaded_netrwPlugin = 1
+
+        vim.api.nvim_create_autocmd("TermOpen", {
+            callback = function(args)
+                if vim.bo[args.buf].filetype == "yazi" then
+                    vim.keymap.set("t", "<Esc><Esc>", function()
+                        vim.cmd("close")
+                    end, {
+                        buffer = args.buf,
+                    })
+                end
+            end,
+        })
     end,
 }

@@ -226,7 +226,8 @@ local function stop_server()
     end
 
     pcall(function()
-        state.server:kill(15)
+        state.server:kill(vim.loop.constants.SIGTERM)
+        state.server:wait(1000)
     end)
 
     state.server = nil
@@ -416,6 +417,7 @@ return {
             handlers = {},
             ensure_installed = {
                 "codelldb",
+                "cppdbg",
                 "debugpy",
                 "kotlin-debug-adapter",
             },
@@ -577,8 +579,8 @@ return {
         -- native GDB and CodeLLDB launches never touch it.
         ------------------------------------------------------------------------
 
-        dap.listeners.before.attach["openocd"] = function(_, body)
-            if body and body.type == "gdb_embedded" then
+        dap.listeners.before.launch.openocd = function(config)
+            if config.name == "OpenOCD" then
                 start_openocd()
             end
         end
@@ -614,35 +616,13 @@ return {
             },
         }
 
-        local function gdb_native_adapter(callback)
-            check_executable(native.gdb, "GDB")
+        check_executable(vim.fn.stdpath("data") .. "/mason/bin/OpenDebugAD7", "OpenDebugAD7")
 
-            callback({
-                id = "gdb_native",
-                type = "executable",
-                command = native.gdb,
-                args = { "--quiet", "--interpreter=dap" },
-            })
-        end
-
-        local function gdb_embedded_adapter(callback)
-            check_executable(embedded.gdb, "GDB (embedded)")
-
-            callback({
-                id = "gdb_embedded",
-                type = "executable",
-                command = embedded.gdb,
-                args = { "--quiet", "--interpreter=dap" },
-            })
-        end
-
-        dap.adapters.gdb_native = function(callback)
-            gdb_native_adapter(callback)
-        end
-
-        dap.adapters.gdb_embedded = function(callback)
-            gdb_embedded_adapter(callback)
-        end
+        dap.adapters.cppdbg = {
+            id = "cppdbg",
+            type = "executable",
+            command = vim.fn.stdpath("data") .. "/mason/bin/OpenDebugAD7",
+        }
 
         ------------------------------------------------------------------------
         -- Launch / attach configurations
@@ -669,50 +649,93 @@ return {
             }
         end
 
-        local function gdb_native_launch()
+        local function cppdbg_launch()
+            check_executable(native.gdb, "GDB")
             return {
-                name = "Launch (GDB Native)",
-                type = "gdb_native",
+                name = "Launch (cppdbg)",
+                type = "cppdbg",
                 request = "launch",
+
                 program = function()
                     local program = choose_program(false)
                     check_file(program, "Program")
-                    vim.notify("Using " .. native.gdb)
-                    vim.notify("Program: " .. program)
                     return program
                 end,
+
                 cwd = "${workspaceFolder}",
-                stopAtBeginningOfMainSubprogram = false,
+
+                MIMode = "gdb",
+
+                miDebuggerPath = native.gdb,
+
+                stopAtEntry = false,
+
+                setupCommands = {
+                    {
+                        text = "-enable-pretty-printing",
+                    },
+                },
+                logging = {
+                    engineLogging = true,
+                    trace = true,
+                    traceResponse = false,
+                },
             }
         end
 
-        local function openocd_attach()
+        local function cppdbg_remote()
+            check_executable(embedded.gdb, "ARM GDB")
             return {
-                name = "Attach (OpenOCD)",
-                type = "gdb_embedded",
+                name = "cppdbg + OpenOCD",
+                type = "cppdbg",
                 request = "attach",
-                target = embedded.target,
+
                 program = function()
                     local program = choose_program(false)
                     check_file(program, "Program")
-                    vim.notify("Using " .. embedded.gdb)
-                    vim.notify("Program: " .. program)
                     return program
                 end,
+
                 cwd = "${workspaceFolder}",
+
+                MIMode = "gdb",
+                miDebuggerPath = embedded.gdb,
+
+                miDebuggerServerAddress = embedded.target,
+
+                customLaunchSetupCommands = {
+                    {
+                        text = "monitor reset halt",
+                        description = "Reset target",
+                        ignoreFailures = false,
+                    },
+                },
+
+                stopAtEntry = true,
+
+                setupCommands = {
+                    {
+                        text = "-enable-pretty-printing",
+                    },
+                    {
+                        text = "monitor reset halt",
+                    },
+                },
+
+                externalConsole = false,
             }
         end
 
         dap.configurations.c = {
             codelldb_launch(),
-            gdb_native_launch(),
-            openocd_attach(),
+            cppdbg_launch(),
+            cppdbg_remote(),
         }
 
         dap.configurations.cpp = {
             codelldb_launch(),
-            gdb_native_launch(),
-            openocd_attach(),
+            cppdbg_launch(),
+            cppdbg_remote(),
         }
 
         dap.configurations.zig = {

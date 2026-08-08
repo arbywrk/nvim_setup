@@ -1,25 +1,22 @@
--- Neo-tree is a Neovim plugin to browse the file system
--- https://github.com/nvim-neo-tree/neo-tree.nvim
-
--- getting depricated for Yazi
 return {
     "nvim-neo-tree/neo-tree.nvim",
-    version = "*",
+    branch = "v3.x",
+    lazy = false, -- neo-tree will lazily load itself
     dependencies = {
         "nvim-lua/plenary.nvim",
-        "nvim-tree/nvim-web-devicons", -- not strictly required, but recommended
         "MunifTanjim/nui.nvim",
+        "nvim-tree/nvim-web-devicons", -- not strictly required, but recommended
     },
     cmd = "Neotree",
     keys = {
-        -- { "\\", ":Neotree reveal<CR>", desc = "NeoTree reveal", silent = true },
+        { "<leader>\\", ":Neotree toggle<CR>", desc = "NeoTree reveal", silent = true },
     },
     opts = {
         filesystem = {
             window = {
                 position = "right",
                 mappings = {
-                    -- ["\\"] = "close_window",
+                    ["<leader>\\"] = "close_window",
                 },
             },
             -- group_empty_dirs = true,

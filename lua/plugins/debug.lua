@@ -228,7 +228,6 @@ return {
                 "codelldb",
                 "cppdbg",
                 "debugpy",
-                "kotlin-debug-adapter",
             },
         })
 
@@ -471,26 +470,5 @@ return {
         ------------------------------------------------------------------------
 
         require("dap-python").setup(vim.fn.stdpath("data") .. "/mason/packages/debugpy/venv/bin/python")
-
-        ------------------------------------------------------------------------
-        -- Kotlin
-        ------------------------------------------------------------------------
-
-        dap.adapters.kotlin = {
-            type = "executable",
-            command = vim.fn.stdpath("data") .. "/mason/bin/kotlin-debug-adapter",
-        }
-
-        dap.configurations.kotlin = {
-            {
-                name = "Launch Kotlin",
-                type = "kotlin",
-                request = "launch",
-                projectRoot = "${workspaceFolder}",
-                mainClass = function()
-                    return vim.fn.input("Main class (e.g. com.example.MainKt): ")
-                end,
-            },
-        }
     end,
 }

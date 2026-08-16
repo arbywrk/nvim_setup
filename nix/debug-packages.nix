@@ -5,10 +5,6 @@
 # bare, PATH-resolvable name -- matching what debug.lua's kind modules
 # expect (plain command names, not baked-in store paths that would go
 # stale on every rebuild).
-#
-# Known gap: kotlin-debug-adapter is not packaged in nixpkgs. Kotlin DAP
-# support is dropped rather than worked around here -- low priority given
-# how little this config is actually used for Kotlin.
 { pkgs }:
 let
   codelldb-bin = pkgs.runCommand "codelldb-bin" { } ''

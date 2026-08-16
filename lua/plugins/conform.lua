@@ -1,7 +1,3 @@
-local prettierd = vim.fn.executable("node") == 1 and { "prettierd" } or {}
-local json_formatter = vim.fn.executable("node") == 1 and { "prettierd" } or { "jq" }
-local jsonc_formatter = vim.fn.executable("node") == 1 and { "prettierd" } or {}
-
 return {
     {
         "stevearc/conform.nvim",
@@ -32,16 +28,9 @@ return {
                 zig = { "zig" },
                 sh = { "shfmt" },
                 bash = { "shfmt" },
-                kotlin = { "ktlint" },
                 nix = { "nixfmt" },
                 toml = { "taplo" },
-                javascript = prettierd,
-                javascriptreact = prettierd,
-                html = prettierd,
-                css = prettierd,
-                scss = prettierd,
-                json = json_formatter,
-                jsonc = jsonc_formatter,
+                json = { "jq" },
             },
         },
     },

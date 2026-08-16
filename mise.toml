@@ -4,7 +4,6 @@ stylua = "latest"
 lua-language-server = "latest"
 ripgrep = "latest"
 fd = "latest"
-node = "22"
 
 [tasks.format]
 run = "stylua ."

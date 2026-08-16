@@ -6,6 +6,9 @@
 local keymap = require("util.keymap")
 local build_config = require("config.build")
 
+-- Plain built-in terminal (no toggleterm dependency): a bottom split
+-- running the command directly, left open after exit so output/errors
+-- stay visible.
 local function run(step)
     local profile = build_config.select(false)
 
@@ -20,14 +23,12 @@ local function run(step)
         return
     end
 
-    local Terminal = require("toggleterm.terminal").Terminal
+    local cmd = vim.list_extend({ step_cfg.command }, step_cfg.args or {})
+    local root = vim.fs.root(0, ".git") or vim.fn.getcwd()
 
-    Terminal:new({
-        cmd = vim.list_extend({ step_cfg.command }, step_cfg.args or {}),
-        dir = "git_dir",
-        direction = "horizontal",
-        close_on_exit = false,
-    }):toggle()
+    vim.cmd("botright split")
+    vim.fn.jobstart(cmd, { term = true, cwd = root })
+    vim.cmd("startinsert")
 end
 
 keymap.map("n", "<leader>mb", function()

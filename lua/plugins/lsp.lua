@@ -28,8 +28,6 @@ return {
             local attach_group = vim.api.nvim_create_augroup("user-lsp-attach", { clear = true })
             local highlight_group = vim.api.nvim_create_augroup("user-lsp-highlight", { clear = false })
             local detach_group = vim.api.nvim_create_augroup("user-lsp-detach", { clear = false })
-            local has_node = vim.fn.executable("node") == 1
-            local has_npm = vim.fn.executable("npm") == 1
 
             vim.api.nvim_create_autocmd("LspAttach", {
                 group = attach_group,
@@ -114,8 +112,6 @@ return {
                     },
                 },
 
-                kotlin_language_server = {},
-
                 lua_ls = {
                     settings = {
                         Lua = {
@@ -127,46 +123,6 @@ return {
                 },
             }
 
-            if has_node then
-                servers.ts_ls = {
-                    filetypes = {
-                        "javascript",
-                        "javascriptreact",
-                    },
-                    settings = {
-                        javascript = {
-                            suggest = {
-                                completeJSDocs = true,
-                            },
-                            preferences = {
-                                includePackageJsonAutoImports = "auto",
-                            },
-                        },
-                    },
-                }
-
-                servers.html = {}
-                servers.cssls = {}
-                servers.jsonls = {}
-
-                servers.eslint = {
-                    filetypes = {
-                        "javascript",
-                        "javascriptreact",
-                    },
-                }
-
-                servers.emmet_language_server = {
-                    filetypes = {
-                        "html",
-                        "css",
-                        "scss",
-                        "javascript",
-                        "javascriptreact",
-                    },
-                }
-            end
-
             require("mason").setup()
 
             local ensure_installed = {
@@ -175,7 +131,6 @@ return {
                 "lua_ls",
                 "zls",
                 "basedpyright",
-                "kotlin_language_server",
                 "bashls",
                 "nil",
                 "taplo",
@@ -184,24 +139,11 @@ return {
                 "stylua",
                 "clang-format",
                 "shfmt",
-                "ktlint",
                 "ruff",
                 "shellcheck",
                 "nixfmt",
                 "jq",
             }
-
-            if has_npm then
-                vim.list_extend(ensure_installed, {
-                    "ts_ls",
-                    "html",
-                    "cssls",
-                    "emmet_language_server",
-                    "eslint-lsp",
-                    "json-lsp",
-                    "prettierd",
-                })
-            end
 
             require("mason-tool-installer").setup({
                 ensure_installed = ensure_installed,

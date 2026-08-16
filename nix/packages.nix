@@ -23,10 +23,6 @@ with pkgs;
   basedpyright
   ruff
 
-  # Kotlin
-  kotlin-language-server
-  ktlint
-
   # Bash
   bash-language-server
   shfmt
@@ -40,10 +36,4 @@ with pkgs;
   taplo
   sqls
   jq
-
-  # Web (JS/TS/HTML/CSS/JSON/ESLint)
-  typescript-language-server
-  vscode-langservers-extracted
-  emmet-language-server
-  prettier
 ]

@@ -65,6 +65,7 @@ return {
                 { "<leader>ug", group = "[U]I: [G]it toggles" },
                 { "<leader>g", group = "[G]it" },
                 { "<leader>gh", group = "Git [H]unk", mode = { "n", "v" } },
+                { "<leader>x", group = "Diagnostics / Trouble" },
 
                 -- Debug controls
                 { "<leader>d", group = "[D]ebugger" },

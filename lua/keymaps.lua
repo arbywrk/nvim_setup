@@ -61,3 +61,6 @@ end, { desc = "Toggle Light/Dark Mode" })
 
 -- Use :w!! to write sudo file
 vim.keymap.set("c", "w!!", "w !sudo tee > /dev/null %", { desc = "Write file with sudo" })
+
+require("keymaps.window")
+require("keymaps.buffer")

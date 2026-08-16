@@ -44,10 +44,15 @@
         ];
       };
 
+      # Tooling for hacking on this repo itself (formatting, linting,
+      # searching) -- replaces the old mise.toml now that the flake is the
+      # single source of reproducible tooling.
       devShells.${system}.default = pkgs.mkShell {
         packages = with pkgs; [
           stylua
           lua-language-server
+          ripgrep
+          fd
         ];
       };
     };

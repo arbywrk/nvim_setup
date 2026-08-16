@@ -10,171 +10,165 @@ local function confirm(message, action)
     end
 end
 
-return {
-    "lewis6991/gitsigns.nvim",
+require("gitsigns").setup({
+    ----------------------------------------------------------------------
+    -- Signs
+    ----------------------------------------------------------------------
 
-    event = { "BufReadPre", "BufNewFile" },
+    signs = {
+        add = { text = "▎" },
+        change = { text = "▎" },
+        delete = { text = "" },
+        topdelete = { text = "" },
+        changedelete = { text = "▎" },
+        untracked = { text = "▎" },
+    },
 
-    opts = {
-        ----------------------------------------------------------------------
-        -- Signs
-        ----------------------------------------------------------------------
+    signcolumn = true,
+    numhl = false,
+    linehl = false,
+    word_diff = false,
 
-        signs = {
-            add = { text = "▎" },
-            change = { text = "▎" },
-            delete = { text = "" },
-            topdelete = { text = "" },
-            changedelete = { text = "▎" },
-            untracked = { text = "▎" },
-        },
+    ----------------------------------------------------------------------
+    -- Blame
+    ----------------------------------------------------------------------
 
-        signcolumn = true,
-        numhl = false,
-        linehl = false,
-        word_diff = false,
+    current_line_blame = false,
 
-        ----------------------------------------------------------------------
-        -- Blame
-        ----------------------------------------------------------------------
+    current_line_blame_opts = {
+        delay = 300,
+        virt_text_pos = "eol",
+        ignore_whitespace = true,
+    },
 
-        current_line_blame = false,
+    current_line_blame_formatter = "<author>, <author_time:%Y-%m-%d> • <summary>",
 
-        current_line_blame_opts = {
-            delay = 300,
-            virt_text_pos = "eol",
-            ignore_whitespace = true,
-        },
+    ----------------------------------------------------------------------
+    -- Preview
+    ----------------------------------------------------------------------
 
-        current_line_blame_formatter = "<author>, <author_time:%Y-%m-%d> • <summary>",
+    preview_config = {
+        border = "rounded",
+        style = "minimal",
+    },
 
-        ----------------------------------------------------------------------
-        -- Preview
-        ----------------------------------------------------------------------
+    ----------------------------------------------------------------------
+    -- Keymaps
+    ----------------------------------------------------------------------
 
-        preview_config = {
-            border = "rounded",
-            style = "minimal",
-        },
+    on_attach = function(bufnr)
+        local gs = require("gitsigns")
+        local keymap = require("util.keymap")
 
-        ----------------------------------------------------------------------
-        -- Keymaps
-        ----------------------------------------------------------------------
+        local function map(mode, lhs, rhs, desc)
+            keymap.buffer_map(bufnr, mode, lhs, rhs, desc, { silent = true })
+        end
 
-        on_attach = function(bufnr)
-            local gs = require("gitsigns")
-            local keymap = require("util.keymap")
+        ------------------------------------------------------------------
+        -- Navigation
+        ------------------------------------------------------------------
 
-            local function map(mode, lhs, rhs, desc)
-                keymap.buffer_map(bufnr, mode, lhs, rhs, desc, { silent = true })
+        map("n", "]h", function()
+            if vim.wo.diff then
+                vim.cmd.normal({ "]c", bang = true })
+                return
             end
 
-            ------------------------------------------------------------------
-            -- Navigation
-            ------------------------------------------------------------------
+            gs.nav_hunk("next")
+        end, "Git: Next hunk")
 
-            map("n", "]h", function()
-                if vim.wo.diff then
-                    vim.cmd.normal({ "]c", bang = true })
-                    return
-                end
+        map("n", "[h", function()
+            if vim.wo.diff then
+                vim.cmd.normal({ "[c", bang = true })
+                return
+            end
 
-                gs.nav_hunk("next")
-            end, "Git: Next hunk")
+            gs.nav_hunk("prev")
+        end, "Git: Previous hunk")
 
-            map("n", "[h", function()
-                if vim.wo.diff then
-                    vim.cmd.normal({ "[c", bang = true })
-                    return
-                end
+        ------------------------------------------------------------------
+        -- Stage
+        ------------------------------------------------------------------
 
-                gs.nav_hunk("prev")
-            end, "Git: Previous hunk")
+        map("n", "<leader>ghs", gs.stage_hunk, "Git: Stage hunk")
 
-            ------------------------------------------------------------------
-            -- Stage
-            ------------------------------------------------------------------
+        map("v", "<leader>ghs", function()
+            gs.stage_hunk({
+                vim.fn.line("."),
+                vim.fn.line("v"),
+            })
+        end, "Git: Stage selection")
 
-            map("n", "<leader>ghs", gs.stage_hunk, "Git: Stage hunk")
+        map("n", "<leader>ghS", confirm("Stage every change in this file?", gs.stage_buffer), "Git: Stage buffer")
 
-            map("v", "<leader>ghs", function()
-                gs.stage_hunk({
-                    vim.fn.line("."),
-                    vim.fn.line("v"),
-                })
-            end, "Git: Stage selection")
+        map("n", "<leader>ghu", gs.undo_stage_hunk, "Git: Undo stage")
 
-            map("n", "<leader>ghS", confirm("Stage every change in this file?", gs.stage_buffer), "Git: Stage buffer")
+        ------------------------------------------------------------------
+        -- Reset
+        ------------------------------------------------------------------
 
-            map("n", "<leader>ghu", gs.undo_stage_hunk, "Git: Undo stage")
+        map("n", "<leader>ghr", confirm("Discard this hunk?", gs.reset_hunk), "Git: Reset hunk")
 
-            ------------------------------------------------------------------
-            -- Reset
-            ------------------------------------------------------------------
+        map("v", "<leader>ghr", function()
+            if vim.fn.confirm("Discard selected lines?", "&Yes\n&No", 2) ~= 1 then
+                return
+            end
 
-            map("n", "<leader>ghr", confirm("Discard this hunk?", gs.reset_hunk), "Git: Reset hunk")
+            gs.reset_hunk({
+                vim.fn.line("."),
+                vim.fn.line("v"),
+            })
+        end, "Git: Reset selection")
 
-            map("v", "<leader>ghr", function()
-                if vim.fn.confirm("Discard selected lines?", "&Yes\n&No", 2) ~= 1 then
-                    return
-                end
+        map(
+            "n",
+            "<leader>ghR",
+            confirm("Discard ALL unstaged changes in this file?", gs.reset_buffer),
+            "Git: Reset buffer"
+        )
 
-                gs.reset_hunk({
-                    vim.fn.line("."),
-                    vim.fn.line("v"),
-                })
-            end, "Git: Reset selection")
+        ------------------------------------------------------------------
+        -- Preview
+        ------------------------------------------------------------------
 
-            map(
-                "n",
-                "<leader>ghR",
-                confirm("Discard ALL unstaged changes in this file?", gs.reset_buffer),
-                "Git: Reset buffer"
-            )
+        map("n", "<leader>ghp", gs.preview_hunk_inline, "Git: Preview hunk")
 
-            ------------------------------------------------------------------
-            -- Preview
-            ------------------------------------------------------------------
+        ------------------------------------------------------------------
+        -- Blame
+        ------------------------------------------------------------------
 
-            map("n", "<leader>ghp", gs.preview_hunk_inline, "Git: Preview hunk")
+        map("n", "<leader>ghb", gs.blame_line, "Git: Blame line")
 
-            ------------------------------------------------------------------
-            -- Blame
-            ------------------------------------------------------------------
+        map("n", "<leader>ghB", function()
+            gs.blame_line({
+                full = true,
+            })
+        end, "Git: Full blame")
 
-            map("n", "<leader>ghb", gs.blame_line, "Git: Blame line")
+        ------------------------------------------------------------------
+        -- Diff
+        ------------------------------------------------------------------
 
-            map("n", "<leader>ghB", function()
-                gs.blame_line({
-                    full = true,
-                })
-            end, "Git: Full blame")
+        map("n", "<leader>ghd", gs.diffthis, "Git: Diff against index")
 
-            ------------------------------------------------------------------
-            -- Diff
-            ------------------------------------------------------------------
+        map("n", "<leader>ghD", function()
+            gs.diffthis("@")
+        end, "Git: Diff against HEAD")
 
-            map("n", "<leader>ghd", gs.diffthis, "Git: Diff against index")
+        ------------------------------------------------------------------
+        -- Toggles
+        ------------------------------------------------------------------
 
-            map("n", "<leader>ghD", function()
-                gs.diffthis("@")
-            end, "Git: Diff against HEAD")
+        map("n", "<leader>ugb", gs.toggle_current_line_blame, "Toggle Git blame")
 
-            ------------------------------------------------------------------
-            -- Toggles
-            ------------------------------------------------------------------
+        map("n", "<leader>ugd", gs.toggle_deleted, "Toggle deleted lines")
 
-            map("n", "<leader>ugb", gs.toggle_current_line_blame, "Toggle Git blame")
+        map("n", "<leader>ugw", gs.toggle_word_diff, "Toggle word diff")
 
-            map("n", "<leader>ugd", gs.toggle_deleted, "Toggle deleted lines")
+        ------------------------------------------------------------------
+        -- Text objects
+        ------------------------------------------------------------------
 
-            map("n", "<leader>ugw", gs.toggle_word_diff, "Toggle word diff")
-
-            ------------------------------------------------------------------
-            -- Text objects
-            ------------------------------------------------------------------
-
-            map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", "Git hunk")
-        end,
-    },
-}
+        map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", "Git hunk")
+    end,
+})

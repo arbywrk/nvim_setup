@@ -1,28 +1,4 @@
-return {
-    {
-        "nvim-treesitter/nvim-treesitter",
-        branch = "main",
-        build = ":TSUpdate",
-        config = function()
-            require("nvim-treesitter").setup()
-            require("nvim-treesitter").install({
-                "bash",
-                "c",
-                "cpp",
-                "diff",
-                "lua",
-                "luadoc",
-                "nix",
-                "python",
-                "query",
-                "toml",
-                "vim",
-                "vimdoc",
-                "rust",
-                "ron",
-                "sql",
-                "zig",
-            })
-        end,
-    },
-}
+-- Parsers are bundled at build time via nix/plugins.nix's
+-- nvim-treesitter.withPlugins -- no runtime :TSInstall / .install() call
+-- needed (or wanted: that would mean a network fetch at edit-time).
+require("nvim-treesitter").setup()

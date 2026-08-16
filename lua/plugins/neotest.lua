@@ -1,47 +1,24 @@
-return {
-    "nvim-neotest/neotest",
-    dependencies = {
-        "nvim-neotest/nvim-nio",
-        "nvim-lua/plenary.nvim",
-        "nvim-treesitter/nvim-treesitter",
-        "nvim-neotest/neotest-python",
+local keymap = require("util.keymap")
+
+keymap.map("n", "<leader>tr", function()
+    require("neotest").run.run()
+end, "Test: Run nearest")
+
+keymap.map("n", "<leader>tf", function()
+    require("neotest").run.run(vim.fn.expand("%"))
+end, "Test: Run file")
+
+keymap.map("n", "<leader>ts", function()
+    require("neotest").summary.toggle()
+end, "Test: Toggle summary")
+
+keymap.map("n", "<leader>to", function()
+    require("neotest").output.open({ enter = true })
+end, "Test: Show output")
+
+require("neotest").setup({
+    adapters = {
+        require("rustaceanvim.neotest"),
+        require("neotest-python"),
     },
-    keys = {
-        {
-            "<leader>tr",
-            function()
-                require("neotest").run.run()
-            end,
-            desc = "Test: Run nearest",
-        },
-        {
-            "<leader>tf",
-            function()
-                require("neotest").run.run(vim.fn.expand("%"))
-            end,
-            desc = "Test: Run file",
-        },
-        {
-            "<leader>ts",
-            function()
-                require("neotest").summary.toggle()
-            end,
-            desc = "Test: Toggle summary",
-        },
-        {
-            "<leader>to",
-            function()
-                require("neotest").output.open({ enter = true })
-            end,
-            desc = "Test: Show output",
-        },
-    },
-    config = function()
-        require("neotest").setup({
-            adapters = {
-                require("rustaceanvim.neotest"),
-                require("neotest-python"),
-            },
-        })
-    end,
-}
+})

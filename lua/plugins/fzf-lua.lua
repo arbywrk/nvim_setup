@@ -141,6 +141,10 @@ return {
             desc = "[S]earch [S]ources",
         })
 
+        vim.keymap.set("n", "<leader>sS", fzf.lsp_live_workspace_symbols, {
+            desc = "[S]earch Workspace [S]ymbols",
+        })
+
         vim.keymap.set("n", "<leader><leader>", fzf.buffers, {
             desc = "Switch Buffer",
         })
@@ -192,26 +196,6 @@ return {
 
         vim.keymap.set("n", "<leader>gl", fzf.git_bcommits, {
             desc = "[G]it File [L]og",
-        })
-
-        ------------------------------------------------------------------
-        -- LSP
-        ------------------------------------------------------------------
-
-        vim.keymap.set("n", "gd", fzf.lsp_definitions, {
-            desc = "Goto Definition",
-        })
-
-        vim.keymap.set("n", "gr", fzf.lsp_references, {
-            desc = "Goto References",
-        })
-
-        vim.keymap.set("n", "gi", fzf.lsp_implementations, {
-            desc = "Goto Implementation",
-        })
-
-        vim.keymap.set("n", "gt", fzf.lsp_typedefs, {
-            desc = "Goto Type Definition",
         })
 
         vim.keymap.set("n", "<leader>sn", function()

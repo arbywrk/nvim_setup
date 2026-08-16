@@ -83,9 +83,9 @@ return {
                     end
 
                     if client:supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then
-                        map("<leader>th", function()
+                        map("<leader>ui", function()
                             vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = event.buf }))
-                        end, "[T]oggle Inlay [H]ints")
+                        end, "Toggle [I]nlay Hints")
                     end
 
                     clangd.on_attach(client, event.buf)

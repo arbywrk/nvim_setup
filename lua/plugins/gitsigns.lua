@@ -164,11 +164,11 @@ return {
             -- Toggles
             ------------------------------------------------------------------
 
-            map("n", "<leader>tb", gs.toggle_current_line_blame, "Toggle Git blame")
+            map("n", "<leader>ugb", gs.toggle_current_line_blame, "Toggle Git blame")
 
-            map("n", "<leader>tD", gs.toggle_deleted, "Toggle deleted lines")
+            map("n", "<leader>ugd", gs.toggle_deleted, "Toggle deleted lines")
 
-            map("n", "<leader>tw", gs.toggle_word_diff, "Toggle word diff")
+            map("n", "<leader>ugw", gs.toggle_word_diff, "Toggle word diff")
 
             ------------------------------------------------------------------
             -- Text objects

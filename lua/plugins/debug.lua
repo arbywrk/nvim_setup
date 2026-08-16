@@ -12,118 +12,20 @@
 local util = require("config.debug.util")
 local kinds = require("config.debug.kinds")
 
-local embedded = {
+-- Still hardcoded for one board/probe -- becomes project-registered data
+-- in a follow-up commit. Shaped like the openocd-remote kind's target
+-- schema already, so that change is additive, not another rewrite.
+local embedded_target = {
+    name = "cppdbg + OpenOCD",
     gdb = "arm-none-eabi-gdb",
-    target = "localhost:3333",
+    gdb_target = "localhost:3333",
     connect_timeout_ms = 5000,
-}
-
-local openocd = {
-    command = "openocd",
-    args = {
-        "-f",
-        "interface/stlink.cfg",
-        "-f",
-        "target/stm32f4x.cfg",
+    server = {
+        command = "openocd",
+        args = { "-f", "interface/stlink.cfg", "-f", "target/stm32f4x.cfg" },
     },
+    reset_commands = { "monitor reset halt" },
 }
-
------------------------------------------------------------------------
--- Debug state
------------------------------------------------------------------------
-
-local state = {
-    server = nil, -- vim.system handle for a running OpenOCD process
-}
-
------------------------------------------------------------------------
--- Wait for a TCP server to accept connections
---
--- Replaces the old vim.wait(500) guess with an actual connect loop,
--- polling until it succeeds or the timeout elapses.
------------------------------------------------------------------------
-
-local function wait_for_tcp(target, timeout_ms)
-    local host, port = target:match("^(.-):(%d+)$")
-    port = tonumber(port)
-
-    if not host or not port then
-        error("Invalid target address: " .. tostring(target))
-    end
-
-    local deadline = vim.uv.now() + timeout_ms
-
-    while vim.uv.now() < deadline do
-        local client = vim.uv.new_tcp()
-
-        if not client then
-            error("Could not create a TCP handle (vim.uv.new_tcp() failed)")
-        end
-
-        local connected = false
-        local finished = false
-
-        client:connect(host, port, function(err)
-            connected = (err == nil)
-            finished = true
-
-            if not client:is_closing() then
-                client:close()
-            end
-        end)
-
-        vim.wait(200, function()
-            return finished
-        end, 20)
-
-        if connected then
-            return true
-        end
-    end
-
-    return false
-end
-
------------------------------------------------------------------------
--- OpenOCD lifecycle
---
--- Kills any server left running from a previous crashed session
--- before starting a fresh one, then blocks (with a real timeout)
--- until it is actually accepting connections.
------------------------------------------------------------------------
-
-local function stop_server()
-    if not state.server then
-        return
-    end
-
-    pcall(function()
-        state.server:kill(vim.loop.constants.SIGTERM)
-        state.server:wait(1000)
-    end)
-
-    state.server = nil
-end
-
-local function start_openocd()
-    stop_server() -- in case a previous session died without cleaning up
-
-    util.check_executable(openocd.command, "OpenOCD")
-
-    vim.notify("Starting OpenOCD...", vim.log.levels.INFO)
-
-    state.server =
-        vim.system(vim.list_extend({ openocd.command }, openocd.args), { cwd = vim.fn.getcwd(), detach = true })
-
-    vim.notify(("Connecting to %s..."):format(embedded.target), vim.log.levels.INFO)
-
-    if not wait_for_tcp(embedded.target, embedded.connect_timeout_ms) then
-        stop_server()
-        error(("Timed out waiting for OpenOCD to open %s"):format(embedded.target))
-    end
-
-    vim.notify("OpenOCD ready.", vim.log.levels.INFO)
-end
 
 -----------------------------------------------------------------------
 -- Breakpoint helpers
@@ -451,9 +353,28 @@ return {
         -- native GDB and CodeLLDB launches never touch it.
         ------------------------------------------------------------------------
 
-        dap.listeners.before.launch.openocd = function(config)
-            if config.name == "OpenOCD" then
-                start_openocd()
+        -- Generic per-kind lifecycle dispatch, keyed off each built config's
+        -- own __kind field. Uses on_config (fires synchronously before the
+        -- adapter is launched) rather than a request/response listener like
+        -- dap.listeners.before.attach: a response-time hook would only fire
+        -- *after* cppdbg's gdb already tried and failed to attach, which is
+        -- too late to have started OpenOCD.
+        dap.listeners.on_config["debug-kinds"] = function(config)
+            local kind = kinds[config.__kind]
+
+            if kind and kind.lifecycle and kind.lifecycle.before_launch then
+                kind.lifecycle.before_launch(config)
+            end
+
+            return config
+        end
+
+        local function stop_kind_lifecycle(session)
+            local kind_config = session and session.config
+            local kind = kind_config and kinds[kind_config.__kind]
+
+            if kind and kind.lifecycle and kind.lifecycle.after_stop then
+                kind.lifecycle.after_stop(kind_config)
             end
         end
 
@@ -461,14 +382,14 @@ return {
             dapui.open()
         end
 
-        dap.listeners.before.event_terminated["dapui"] = function()
+        dap.listeners.before.event_terminated["dapui"] = function(session)
             dapui.close()
-            stop_server()
+            stop_kind_lifecycle(session)
         end
 
-        dap.listeners.before.event_exited["dapui"] = function()
+        dap.listeners.before.event_exited["dapui"] = function(session)
             dapui.close()
-            stop_server()
+            stop_kind_lifecycle(session)
         end
 
         ------------------------------------------------------------------------
@@ -499,56 +420,20 @@ return {
         ------------------------------------------------------------------------
         -- Launch / attach configurations
         --
-        -- Native (CodeLLDB + cppdbg) configs come from the "native" kind
-        -- module. Embedded/remote is still inline here for now -- it moves
-        -- into its own kind module in a follow-up commit.
+        -- Native (CodeLLDB + cppdbg) and embedded/remote (OpenOCD + cppdbg)
+        -- configs both come from their kind modules now. embedded_target is
+        -- still hardcoded for one board/probe -- becomes project-registered
+        -- data in a follow-up commit.
         ------------------------------------------------------------------------
 
-        local function cppdbg_remote()
-            -- util.check_executable(embedded.gdb, "ARM GDB")
-            return {
-                name = "cppdbg + OpenOCD",
-                type = "cppdbg",
-                request = "attach",
-
-                program = function()
-                    local program = util.choose_program(false)
-                    util.check_file(program, "Program")
-                    return program
-                end,
-
-                cwd = "${workspaceFolder}",
-
-                MIMode = "gdb",
-                miDebuggerPath = embedded.gdb,
-
-                miDebuggerServerAddress = embedded.target,
-
-                customLaunchSetupCommands = {
-                    {
-                        text = "monitor reset halt",
-                        description = "Reset target",
-                        ignoreFailures = false,
-                    },
-                },
-
-                stopAtEntry = true,
-
-                setupCommands = {
-                    {
-                        text = "-enable-pretty-printing",
-                    },
-                    {
-                        text = "monitor reset halt",
-                    },
-                },
-
-                externalConsole = false,
-            }
-        end
-
-        dap.configurations.c = vim.list_extend(kinds.native.build_configuration(), { cppdbg_remote() })
-        dap.configurations.cpp = vim.list_extend(kinds.native.build_configuration(), { cppdbg_remote() })
+        dap.configurations.c = vim.list_extend(
+            kinds.native.build_configuration(),
+            kinds["openocd-remote"].build_configuration(embedded_target)
+        )
+        dap.configurations.cpp = vim.list_extend(
+            kinds.native.build_configuration(),
+            kinds["openocd-remote"].build_configuration(embedded_target)
+        )
 
         dap.configurations.zig = {
             kinds.native.codelldb_launch(),

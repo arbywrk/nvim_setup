@@ -16,4 +16,5 @@
 
 return {
     native = require("config.debug.kinds.native"),
+    ["openocd-remote"] = require("config.debug.kinds.openocd_remote"),
 }

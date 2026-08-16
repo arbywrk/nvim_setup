@@ -180,6 +180,37 @@ return {
             end,
             desc = "Debug: Conditional breakpoint",
         },
+        {
+            "<leader>dt",
+            function()
+                local targets = debug_config.targets()
+
+                if #targets == 0 then
+                    vim.notify("No debug targets registered for this project", vim.log.levels.WARN)
+                    return
+                end
+
+                vim.ui.select(targets, {
+                    prompt = "Debug target",
+                    format_item = function(target)
+                        return target.name or target.kind
+                    end,
+                }, function(target)
+                    if not target then
+                        return
+                    end
+
+                    local kind = kinds[target.kind]
+                    if not kind then
+                        vim.notify(("Unknown debug target kind: %s"):format(tostring(target.kind)), vim.log.levels.WARN)
+                        return
+                    end
+
+                    require("dap").run(kind.build_configuration(target)[1])
+                end)
+            end,
+            desc = "Debug: Select target",
+        },
     },
 
     config = function()

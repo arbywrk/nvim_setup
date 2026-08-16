@@ -1,0 +1,29 @@
+-- Example project-local debug config.
+--
+-- Copy this file to your project root as `.nvim.lua` and edit the values
+-- below. The first time you open Neovim in that directory you'll be
+-- prompted to `:trust` it -- see `:h 'exrc'` and doc/debugging.md in this
+-- config for how that works and why it's safe to leave enabled.
+
+require("config.debug").register_target({
+    name = "STM32F4 (OpenOCD)",
+    kind = "openocd-remote",
+
+    -- Path to the GDB used to talk to the target. cppdbg drives this over
+    -- GDB/MI, so it works even with vendor GDBs that don't speak DAP.
+    gdb = "arm-none-eabi-gdb",
+
+    -- Address OpenOCD's GDB server listens on, and how long to wait for
+    -- it to come up before giving up.
+    gdb_target = "localhost:3333",
+    connect_timeout_ms = 5000,
+
+    -- The GDB server to spawn and tear down around the debug session.
+    server = {
+        command = "openocd",
+        args = { "-f", "interface/stlink.cfg", "-f", "target/stm32f4x.cfg" },
+    },
+
+    -- Run after attaching, before the program stops at entry.
+    reset_commands = { "monitor reset halt" },
+})

@@ -10,4 +10,6 @@
 { pkgs, ... }:
 {
   programs.neovim.enable = true;
+
+  home.packages = import ./packages.nix { inherit pkgs; };
 }

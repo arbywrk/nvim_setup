@@ -684,7 +684,7 @@ return {
         end
 
         local function cppdbg_remote()
-            check_executable(embedded.gdb, "ARM GDB")
+            -- check_executable(embedded.gdb, "ARM GDB")
             return {
                 name = "cppdbg + OpenOCD",
                 type = "cppdbg",

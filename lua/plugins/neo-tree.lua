@@ -12,6 +12,7 @@ return {
         { "<leader>\\", ":Neotree toggle<CR>", desc = "NeoTree reveal", silent = true },
     },
     opts = {
+        use_popups_for_input = false,
         filesystem = {
             window = {
                 position = "right",

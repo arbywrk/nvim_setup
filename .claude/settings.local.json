@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "Bash(nvim --version)",
+      "Bash(nvim --headless -c \"lua print\\(vim.fn.stdpath\\('data'\\)\\)\" -c \"qa\")",
+      "Bash(nvim --headless -c \"lua print\\(vim.env.VIMRUNTIME\\)\" -c \"qa\")",
+      "Bash(dnf info *)"
+    ]
+  }
+}

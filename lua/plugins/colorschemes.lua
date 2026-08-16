@@ -1,23 +1,41 @@
 return {
-    -- Edge
+    -- Vague
     {
-        "sainnhe/edge",
+        "vague-theme/vague.nvim",
         priority = 1000,
-        config = function()
-            vim.g.edge_style = "aura" -- or 'neon'
-            vim.g.edge_enable_italic = 1
-            vim.g.edge_transparent_background = 1
-
-            vim.cmd.colorscheme("edge")
-
-            -- plugin highlight overrides (good for transparency)
-            vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "none" })
-            vim.api.nvim_set_hl(0, "NeoTreeNormalNC", { bg = "none" })
-            vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
-            vim.api.nvim_set_hl(0, "NeoTreeFloatTitle", { bg = "none", fg = "#dcdcdc" })
-            vim.api.nvim_set_hl(0, "NeoTreePrompt", { bg = "none", fg = "#dcdcdc" })
-            vim.api.nvim_set_hl(0, "FloatBorder", { bg = "none", fg = "#5c6370" })
-            vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
+        opts = {
+            transparent = true, -- If true, background is not set
+            bold = true, -- Disable bold globally
+            italic = true, -- Disable italic globally
+            on_highlights = function(hl, colors) end,
+            colors = {
+                bg = "#141415",
+                inactiveBg = "#1c1c24",
+                fg = "#cdcdcd",
+                floatBorder = "#878787",
+                line = "#252530",
+                comment = "#606079",
+                builtin = "#b4d4cf",
+                func = "#c48282",
+                string = "#e8b589",
+                number = "#e0a363",
+                property = "#c3c3d5",
+                constant = "#aeaed1",
+                parameter = "#bb9dbd",
+                visual = "#333738",
+                error = "#d8647e",
+                warning = "#f3be7c",
+                hint = "#7e98e8",
+                operator = "#90a0b5",
+                keyword = "#6e94b2",
+                type = "#9bb4bc",
+                search = "#405065",
+                plus = "#7fa563",
+                delta = "#f3be7c",
+            },
+        },
+        init = function()
+            vim.cmd.colorscheme("vague")
         end,
     },
     -- Catppuccin
@@ -40,19 +58,6 @@ return {
         end,
         init = function()
             -- vim.cmd.colorscheme("catppuccin")
-        end,
-    },
-    -- Onedark Pro
-    {
-        "olimorris/onedarkpro.nvim",
-        priority = 1000, -- Ensure it loads first
-        opts = {
-            colors = {
-                bg = "#19181a",
-            },
-        },
-        init = function()
-            -- vim.cmd("colorscheme onedark_vivid") -- apply the collor (set as default)
         end,
     },
     {
@@ -128,36 +133,6 @@ return {
         },
         init = function()
             -- vim.cmd("colorscheme monokai-pro") -- apply the collor (set as default)
-        end,
-    },
-    -- Kanagawa Theme
-    {
-        "rebelot/kanagawa.nvim",
-        lazy = false,
-        priority = 1000,
-        opts = {
-            compile = false, -- Enable compiling the colorscheme
-            undercurl = true, -- Enable undercurls
-            transparent = true, -- Enable transparency
-            commentStyle = { italic = true },
-            functionStyle = {},
-            keywordStyle = { italic = true },
-            statementStyle = { bold = true },
-            typeStyle = {},
-            dimInactive = false, -- Do not dim inactive windows
-            terminalColors = true, -- Define vim.g.terminal_color_{0,17}
-            colors = {
-                palette = {},
-                theme = { wave = {}, lotus = {}, dragon = {}, all = {} },
-            },
-            theme = "wave", -- Default theme
-            background = {
-                dark = "dragon",
-                light = "lotus",
-            },
-        },
-        init = function()
-            -- vim.cmd("colorscheme kanagawa") -- apply the collor (set as default)
         end,
     },
     -- Tokyo Night Theme

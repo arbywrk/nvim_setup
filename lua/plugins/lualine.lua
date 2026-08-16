@@ -7,7 +7,7 @@ return {
 
     opts = {
         options = {
-            theme = "edge",
+            theme = "auto",
             globalstatus = true,
 
             icons_enabled = true,
@@ -54,14 +54,14 @@ return {
             lualine_b = {
                 {
                     "branch",
-                    icon = "",
+                    icon = "󰘬",
                 },
                 {
                     "diff",
                     symbols = {
-                        added = "",
-                        modified = "",
-                        removed = "",
+                        added = " ",
+                        modified = " ",
+                        removed = " ",
                     },
                 },
             },
@@ -82,7 +82,7 @@ return {
                     path = 1,
                     symbols = {
                         modified = " ●",
-                        readonly = " ",
+                        readonly = " !",
                         unnamed = "[No Name]",
                     },
                 },
@@ -136,26 +136,6 @@ return {
                 },
 
                 {
-                    function()
-                        local clients = vim.lsp.get_clients({
-                            bufnr = 0,
-                        })
-
-                        if #clients == 0 then
-                            return ""
-                        end
-
-                        local names = {}
-
-                        for _, client in ipairs(clients) do
-                            names[#names + 1] = client.name
-                        end
-
-                        return "󰒋 " .. table.concat(names, ", ")
-                    end,
-                },
-
-                {
                     "filetype",
                     colored = true,
                     icon_only = false,
@@ -171,10 +151,10 @@ return {
                     sources = { "nvim_diagnostic" },
 
                     symbols = {
-                        error = "",
-                        warn = "",
-                        info = "",
-                        hint = "",
+                        error = " ",
+                        warn = " ",
+                        info = " ",
+                        hint = "󰌵 ",
                     },
 
                     update_in_insert = false,

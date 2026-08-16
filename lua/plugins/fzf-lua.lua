@@ -153,7 +153,7 @@ return {
             fzf.blines({
                 winopts = {
                     preview = {
-                        hidden = "hidden",
+                        hidden = true,
                     },
                 },
             })

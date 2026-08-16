@@ -43,6 +43,9 @@ local options = {
 
     -- Avoid parking the cursor against the screen edge.
     scrolloff = 10,
+
+    -- Disable swapfile, they are really anoying
+    swapfile = false,
 }
 
 for k, v in pairs(options) do

@@ -64,3 +64,4 @@ vim.keymap.set("c", "w!!", "w !sudo tee > /dev/null %", { desc = "Write file wit
 
 require("keymaps.window")
 require("keymaps.buffer")
+require("keymaps.build")

@@ -70,6 +70,7 @@ return {
 
                 -- Debug controls
                 { "<leader>d", group = "[D]ebugger" },
+                { "<leader>m", group = "[M]ake / Build" },
                 { "<Up>", desc = "Debug Continue" },
                 { "<Down>", desc = "Debug Step Over" },
                 { "<Left>", desc = "Debug Step Out" },

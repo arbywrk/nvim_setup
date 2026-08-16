@@ -27,3 +27,12 @@ require("config.debug").register_target({
     -- Run after attaching, before the program stops at entry.
     reset_commands = { "monitor reset halt" },
 })
+
+-- Build/flash/clean actions (<leader>mb/mf/mc/mt). Any step may be
+-- omitted; a profile with no "clean" step just skips <leader>mc.
+require("config.build").register_profile({
+    name = "STM32F4 (Make)",
+    build = { command = "make", args = { "-j" } },
+    flash = { command = "make", args = { "flash" } },
+    clean = { command = "make", args = { "clean" } },
+})

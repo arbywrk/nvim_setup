@@ -1,31 +1,35 @@
 -----------------------------------------------------------------------
--- Hardcoded debug targets
+-- Debug adapter/target setup
 --
--- Everything project-specific lives here, in one place. Changing
--- projects means editing these tables, not learning a configuration
--- system. Once this has been used for a week or two and it's clear
--- what actually varies between projects, THEN it's worth promoting
--- some of these fields into a .nvim/settings.json format designed
--- around real usage instead of anticipated needs.
+-- Native (CodeLLDB/cppdbg) configs are always available, from
+-- config/debug/kinds/native.lua. Project-specific targets (e.g. a board
+-- reached through OpenOCD) are added by a trusted project-local
+-- .nvim.lua (see :h 'exrc') calling
+-- require("config.debug").register_target({...}) -- see doc/debugging.md.
 -----------------------------------------------------------------------
 
 local util = require("config.debug.util")
 local kinds = require("config.debug.kinds")
+local debug_config = require("config.debug")
 
--- Still hardcoded for one board/probe -- becomes project-registered data
--- in a follow-up commit. Shaped like the openocd-remote kind's target
--- schema already, so that change is additive, not another rewrite.
-local embedded_target = {
-    name = "cppdbg + OpenOCD",
-    gdb = "arm-none-eabi-gdb",
-    gdb_target = "localhost:3333",
-    connect_timeout_ms = 5000,
-    server = {
-        command = "openocd",
-        args = { "-f", "interface/stlink.cfg", "-f", "target/stm32f4x.cfg" },
-    },
-    reset_commands = { "monitor reset halt" },
-}
+-- Builds the dap.configurations list for c/cpp: native defaults plus
+-- whatever a project's .nvim.lua registered, dispatched through each
+-- target's own kind module.
+local function project_configurations()
+    local configs = kinds.native.build_configuration()
+
+    for _, target in ipairs(debug_config.targets()) do
+        local kind = kinds[target.kind]
+
+        if kind then
+            vim.list_extend(configs, kind.build_configuration(target))
+        else
+            vim.notify(("Unknown debug target kind: %s"):format(tostring(target.kind)), vim.log.levels.WARN)
+        end
+    end
+
+    return configs
+end
 
 -----------------------------------------------------------------------
 -- Breakpoint helpers
@@ -420,20 +424,12 @@ return {
         ------------------------------------------------------------------------
         -- Launch / attach configurations
         --
-        -- Native (CodeLLDB + cppdbg) and embedded/remote (OpenOCD + cppdbg)
-        -- configs both come from their kind modules now. embedded_target is
-        -- still hardcoded for one board/probe -- becomes project-registered
-        -- data in a follow-up commit.
+        -- Native configs are always present; project-registered targets
+        -- (see project_configurations() above) are appended on top.
         ------------------------------------------------------------------------
 
-        dap.configurations.c = vim.list_extend(
-            kinds.native.build_configuration(),
-            kinds["openocd-remote"].build_configuration(embedded_target)
-        )
-        dap.configurations.cpp = vim.list_extend(
-            kinds.native.build_configuration(),
-            kinds["openocd-remote"].build_configuration(embedded_target)
-        )
+        dap.configurations.c = project_configurations()
+        dap.configurations.cpp = project_configurations()
 
         dap.configurations.zig = {
             kinds.native.codelldb_launch(),

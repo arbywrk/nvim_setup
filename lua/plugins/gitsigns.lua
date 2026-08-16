@@ -63,13 +63,10 @@ return {
 
         on_attach = function(bufnr)
             local gs = require("gitsigns")
+            local keymap = require("util.keymap")
 
             local function map(mode, lhs, rhs, desc)
-                vim.keymap.set(mode, lhs, rhs, {
-                    buffer = bufnr,
-                    silent = true,
-                    desc = desc,
-                })
+                keymap.buffer_map(bufnr, mode, lhs, rhs, desc, { silent = true })
             end
 
             ------------------------------------------------------------------

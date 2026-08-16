@@ -24,6 +24,7 @@ return {
         },
         config = function()
             local clangd = require("config.lsp.clangd")
+            local keymap = require("util.keymap")
             local attach_group = vim.api.nvim_create_augroup("user-lsp-attach", { clear = true })
             local highlight_group = vim.api.nvim_create_augroup("user-lsp-highlight", { clear = false })
             local detach_group = vim.api.nvim_create_augroup("user-lsp-detach", { clear = false })
@@ -34,8 +35,7 @@ return {
                 group = attach_group,
                 callback = function(event)
                     local map = function(keys, func, desc, mode)
-                        mode = mode or "n"
-                        vim.keymap.set(mode, keys, func, { buffer = event.buf, desc = "LSP: " .. desc })
+                        keymap.buffer_map(event.buf, mode or "n", keys, func, "LSP: " .. desc)
                     end
 
                     map("gd", require("fzf-lua").lsp_definitions, "[G]oto [D]efinition")

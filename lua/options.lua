@@ -46,6 +46,11 @@ local options = {
 
     -- Disable swapfile, they are really anoying
     swapfile = false,
+
+    -- Allow trusted per-project .nvim.lua/.nvimrc/.exrc files (see :h 'exrc').
+    -- First encounter in a directory prompts :trust; the decision is hashed
+    -- and persisted, so untrusted/edited files never execute silently.
+    exrc = true,
 }
 
 for k, v in pairs(options) do

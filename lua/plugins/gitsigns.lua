@@ -95,26 +95,26 @@ return {
             -- Stage
             ------------------------------------------------------------------
 
-            map("n", "<leader>gs", gs.stage_hunk, "Git: Stage hunk")
+            map("n", "<leader>ghs", gs.stage_hunk, "Git: Stage hunk")
 
-            map("v", "<leader>gs", function()
+            map("v", "<leader>ghs", function()
                 gs.stage_hunk({
                     vim.fn.line("."),
                     vim.fn.line("v"),
                 })
             end, "Git: Stage selection")
 
-            map("n", "<leader>gS", confirm("Stage every change in this file?", gs.stage_buffer), "Git: Stage buffer")
+            map("n", "<leader>ghS", confirm("Stage every change in this file?", gs.stage_buffer), "Git: Stage buffer")
 
-            map("n", "<leader>gu", gs.undo_stage_hunk, "Git: Undo stage")
+            map("n", "<leader>ghu", gs.undo_stage_hunk, "Git: Undo stage")
 
             ------------------------------------------------------------------
             -- Reset
             ------------------------------------------------------------------
 
-            map("n", "<leader>gr", confirm("Discard this hunk?", gs.reset_hunk), "Git: Reset hunk")
+            map("n", "<leader>ghr", confirm("Discard this hunk?", gs.reset_hunk), "Git: Reset hunk")
 
-            map("v", "<leader>gr", function()
+            map("v", "<leader>ghr", function()
                 if vim.fn.confirm("Discard selected lines?", "&Yes\n&No", 2) ~= 1 then
                     return
                 end
@@ -127,7 +127,7 @@ return {
 
             map(
                 "n",
-                "<leader>gR",
+                "<leader>ghR",
                 confirm("Discard ALL unstaged changes in this file?", gs.reset_buffer),
                 "Git: Reset buffer"
             )
@@ -136,15 +136,15 @@ return {
             -- Preview
             ------------------------------------------------------------------
 
-            map("n", "<leader>gp", gs.preview_hunk_inline, "Git: Preview hunk")
+            map("n", "<leader>ghp", gs.preview_hunk_inline, "Git: Preview hunk")
 
             ------------------------------------------------------------------
             -- Blame
             ------------------------------------------------------------------
 
-            map("n", "<leader>gb", gs.blame_line, "Git: Blame line")
+            map("n", "<leader>ghb", gs.blame_line, "Git: Blame line")
 
-            map("n", "<leader>gB", function()
+            map("n", "<leader>ghB", function()
                 gs.blame_line({
                     full = true,
                 })
@@ -154,9 +154,9 @@ return {
             -- Diff
             ------------------------------------------------------------------
 
-            map("n", "<leader>gd", gs.diffthis, "Git: Diff against index")
+            map("n", "<leader>ghd", gs.diffthis, "Git: Diff against index")
 
-            map("n", "<leader>gD", function()
+            map("n", "<leader>ghD", function()
                 gs.diffthis("@")
             end, "Git: Diff against HEAD")
 

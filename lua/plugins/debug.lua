@@ -9,9 +9,8 @@
 -- around real usage instead of anticipated needs.
 -----------------------------------------------------------------------
 
-local native = {
-    gdb = "gdb",
-}
+local util = require("config.debug.util")
+local kinds = require("config.debug.kinds")
 
 local embedded = {
     gdb = "arm-none-eabi-gdb",
@@ -34,135 +33,8 @@ local openocd = {
 -----------------------------------------------------------------------
 
 local state = {
-    program = nil,
     server = nil, -- vim.system handle for a running OpenOCD process
 }
-
------------------------------------------------------------------------
--- Executable discovery (unchanged -- this part already works well)
------------------------------------------------------------------------
-
-local function is_executable(path)
-    return vim.fn.filereadable(path) == 1 and vim.fn.executable(path) == 1
-end
-
-local function add_all(results, pattern)
-    for _, file in ipairs(vim.fn.glob(pattern, false, true)) do
-        if is_executable(file) then
-            table.insert(results, vim.fs.normalize(file))
-        end
-    end
-end
-
-local function discover_executables()
-    local cwd = vim.fn.getcwd()
-    local executables = {}
-
-    -------------------------------------------------------------
-    -- Zig
-    -------------------------------------------------------------
-    if vim.uv.fs_stat(cwd .. "/build.zig") then
-        add_all(executables, cwd .. "/zig-out/bin/*")
-    end
-
-    -------------------------------------------------------------
-    -- Cargo
-    -------------------------------------------------------------
-    if vim.uv.fs_stat(cwd .. "/Cargo.toml") then
-        add_all(executables, cwd .. "/target/debug/*")
-    end
-
-    -------------------------------------------------------------
-    -- Meson
-    -------------------------------------------------------------
-    if vim.uv.fs_stat(cwd .. "/meson.build") then
-        add_all(executables, cwd .. "/build/**/*")
-    end
-
-    -------------------------------------------------------------
-    -- CMake
-    -------------------------------------------------------------
-    if vim.uv.fs_stat(cwd .. "/CMakeLists.txt") then
-        add_all(executables, cwd .. "/build/**/*")
-
-        for _, dir in ipairs(vim.fn.glob(cwd .. "/cmake-build-*", false, true)) do
-            add_all(executables, dir .. "/**/*")
-        end
-    end
-
-    -------------------------------------------------------------
-    -- Generic Make
-    -------------------------------------------------------------
-    if vim.uv.fs_stat(cwd .. "/Makefile") then
-        add_all(executables, cwd .. "/bin/*")
-        add_all(executables, cwd .. "/build/*")
-        add_all(executables, cwd .. "/*")
-    end
-
-    return vim.fn.uniq(vim.fn.sort(executables))
-end
-
------------------------------------------------------------------------
--- Program selection
---
--- No more reading a program path out of settings.json -- just cache
--- the last choice and re-discover / re-prompt when asked to.
------------------------------------------------------------------------
-
-local function choose_program(force)
-    if not force and state.program and vim.uv.fs_stat(state.program) then
-        return state.program
-    end
-
-    local executables = discover_executables()
-
-    if #executables == 1 then
-        state.program = executables[1]
-        return state.program
-    end
-
-    if #executables > 1 then
-        local done = false
-
-        vim.ui.select(executables, {
-            prompt = "Executable",
-        }, function(choice)
-            state.program = choice
-            done = true
-        end)
-
-        vim.wait(10000, function()
-            return done
-        end)
-
-        if state.program then
-            return state.program
-        end
-    end
-
-    state.program = vim.fn.input("Executable: ", vim.fn.getcwd() .. "/", "file")
-
-    return state.program
-end
-
------------------------------------------------------------------------
--- Health checks
---
--- Fail loudly and immediately, before DAP has started anything, not
--- partway through a launch sequence.
------------------------------------------------------------------------
-
-local function check_executable(path, label)
-    if vim.fn.executable(path) == 0 then
-        error(("%s not found on PATH: %s"):format(label, path))
-    end
-end
-
-local function check_file(path, label)
-    if not path or path == "" or not vim.uv.fs_stat(path) then
-        error(("%s not found: %s"):format(label, tostring(path)))
-    end
-end
 
 -----------------------------------------------------------------------
 -- Wait for a TCP server to accept connections
@@ -236,7 +108,7 @@ end
 local function start_openocd()
     stop_server() -- in case a previous session died without cleaning up
 
-    check_executable(openocd.command, "OpenOCD")
+    util.check_executable(openocd.command, "OpenOCD")
 
     vim.notify("Starting OpenOCD...", vim.log.levels.INFO)
 
@@ -383,8 +255,8 @@ return {
         {
             "<leader>de",
             function()
-                choose_program(true)
-                vim.notify("Executable: " .. tostring(state.program))
+                util.choose_program(true)
+                vim.notify("Executable: " .. tostring(util.current_program()))
             end,
             desc = "Debug: Select executable",
         },
@@ -616,7 +488,7 @@ return {
             },
         }
 
-        check_executable(vim.fn.stdpath("data") .. "/mason/bin/OpenDebugAD7", "OpenDebugAD7")
+        util.check_executable(vim.fn.stdpath("data") .. "/mason/bin/OpenDebugAD7", "OpenDebugAD7")
 
         dap.adapters.cppdbg = {
             id = "cppdbg",
@@ -627,72 +499,21 @@ return {
         ------------------------------------------------------------------------
         -- Launch / attach configurations
         --
-        -- Three explicit configurations, no hidden branching between
-        -- native and embedded. Each prints what it's about to do and
-        -- checks its own preconditions before DAP starts anything.
+        -- Native (CodeLLDB + cppdbg) configs come from the "native" kind
+        -- module. Embedded/remote is still inline here for now -- it moves
+        -- into its own kind module in a follow-up commit.
         ------------------------------------------------------------------------
 
-        local function codelldb_launch()
-            return {
-                name = "Launch (CodeLLDB)",
-                type = "codelldb",
-                request = "launch",
-                program = function()
-                    local program = choose_program(false)
-                    check_file(program, "Program")
-                    vim.notify("Program: " .. program)
-                    return program
-                end,
-                cwd = "${workspaceFolder}",
-                stopOnEntry = false,
-                runInTerminal = false,
-            }
-        end
-
-        local function cppdbg_launch()
-            check_executable(native.gdb, "GDB")
-            return {
-                name = "Launch (cppdbg)",
-                type = "cppdbg",
-                request = "launch",
-
-                program = function()
-                    local program = choose_program(false)
-                    check_file(program, "Program")
-                    return program
-                end,
-
-                cwd = "${workspaceFolder}",
-
-                MIMode = "gdb",
-
-                miDebuggerPath = native.gdb,
-
-                stopAtEntry = false,
-
-                setupCommands = {
-                    {
-                        text = "-enable-pretty-printing",
-                    },
-                },
-                logging = {
-                    engineLogging = true,
-                    trace = true,
-                    traceResponse = false,
-                },
-            }
-        end
-
         local function cppdbg_remote()
-            -- check_executable(embedded.gdb, "ARM GDB")
+            -- util.check_executable(embedded.gdb, "ARM GDB")
             return {
                 name = "cppdbg + OpenOCD",
                 type = "cppdbg",
                 request = "attach",
 
                 program = function()
-                    local program = choose_program(false)
-                    check_file(program, "Program")
+                    local program = util.choose_program(false)
+                    util.check_file(program, "Program")
                     return program
                 end,
 
@@ -726,20 +547,11 @@ return {
             }
         end
 
-        dap.configurations.c = {
-            codelldb_launch(),
-            cppdbg_launch(),
-            cppdbg_remote(),
-        }
-
-        dap.configurations.cpp = {
-            codelldb_launch(),
-            cppdbg_launch(),
-            cppdbg_remote(),
-        }
+        dap.configurations.c = vim.list_extend(kinds.native.build_configuration(), { cppdbg_remote() })
+        dap.configurations.cpp = vim.list_extend(kinds.native.build_configuration(), { cppdbg_remote() })
 
         dap.configurations.zig = {
-            codelldb_launch(),
+            kinds.native.codelldb_launch(),
         }
 
         ------------------------------------------------------------------------
